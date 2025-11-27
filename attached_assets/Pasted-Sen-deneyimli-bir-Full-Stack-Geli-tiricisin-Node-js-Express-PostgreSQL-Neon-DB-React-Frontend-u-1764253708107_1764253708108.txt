@@ -1,0 +1,98 @@
+Sen deneyimli bir Full-Stack Geliştiricisin (Node.js/Express & PostgreSQL/Neon DB & React/Frontend uzmanı).
+
+Görev: Mevcut Koçluk Hakediş Takip Sistemini (Coaching Payment System) yeniden yapılandıracağız. Şu anki sistemde "Öğrenci Yenileme" ve "Koç Ödeme Takibi" konularında kritik mantık hataları var. Aşağıdaki revizyon planına sadık kalarak backend mantığını, veritabanı şemasını ve frontend arayüzünü güncellemeni istiyorum.
+
+1. Veritabanı Şeması Güncellemeleri (Kritik)
+Mevcut yapı muhtemelen çok basit. Bunu ilişkisel ve geçmişi tutan bir yapıya çevirmeliyiz. Lütfen schema.sql veya modelleri şu mantıkla güncelle:
+
+Students Table (Öğrenciler):
+
+Mevcut sütunlara ek olarak: status (Active, Passive, Archived), last_payment_date, package_end_date.
+
+Önemli: Öğrenci "Paket Yenilediğinde" bu tablodaki start_date DEĞİŞMEMELİDİR. Sadece package_end_date ileri atılmalıdır.
+
+StudentPayments Table (Öğrenci Ödemeleri - YENİ):
+
+Hangi öğrenci, ne zaman, hangi paket için, ne kadar ödedi?
+
+Sütunlar: id, student_id, amount, payment_date, package_duration_months, new_end_date.
+
+Amaç: Öğrencinin ödeme geçmişini görmek.
+
+CoachPayments Table (Koç Ödemeleri/Bordro - YENİ):
+
+Koçlara yapılan ödemelerin kaydını tutmak için.
+
+Sütunlar: id, coach_id, payment_period_month (Örn: "2025-11"), total_amount, payment_date, status (Pending, Paid), calculated_at.
+
+Amaç: Bir koça "Kasım ayı ödemesi yapıldı" işaretlendiğinde, sistem bir sonraki ay hesaplamasında bunu karıştırmamalı.
+
+2. Fonksiyonel Revizyonlar ve İş Mantığı
+A. Öğrenci Paket Yenileme (Renewal) Mantığı (DÜZELTME)
+Sorun: Şu an sadece başlangıç tarihi değişiyor ve koçun geçmiş hakedişi siliniyor.
+
+Çözüm: Admin panelinde öğrenci detayına "Paket Yenile / Ödeme Ekle" butonu ekle.
+
+Akış:
+
+Admin paketi seçer (örn: +2 Ay).
+
+Sistem, mevcut package_end_date üzerine 2 ay ekler. (Eğer paket zaten bitmişse, bugünden itibaren 2 ay ekler).
+
+start_date ASLA değişmez (Koçun kıstelyevm hesabının bozulmaması için).
+
+Öğrencinin statüsü "Active" olur.
+
+StudentPayments tablosuna bir kayıt atılır.
+
+B. Koç Hakediş ve Ödeme Onay Ekranı (DÜZELTME)
+Sorun: Koçlara ödeme yapılıp yapılmadığı belli değil.
+
+Çözüm: Yeni bir "Finans & Hakedişler" sayfası tasarla.
+
+Özellikler:
+
+Dönem Seçimi: Dropdown ile ay/yıl seçilebilsin (Örn: Kasım 2025).
+
+Hesapla Butonu: Seçili ay için tüm koçların hakedişlerini (Kıstelyevm mantığıyla: (Maaş / 30) * Aktif Gün Sayısı) hesaplayıp bir ön izleme tablosu getirsin.
+
+Durum Yönetimi: Tabloda her koçun yanında "Öde / İşaretle" butonu olsun.
+
+İşaretleme: Admin "Ödendi Olarak İşaretle" dediğinde, veritabanındaki CoachPayments tablosuna status: Paid olarak kaydedilsin.
+
+Görsel: Ödenen koçlar "Yeşil Tik" ile, ödenmeyenler "Kırmızı/Sarı Uyarı" ile gösterilsin. Tekrar hesaplama yapıldığında ödenmiş olanlar tekrar borç olarak çıkmasın.
+
+3. Frontend ve UI İyileştirmeleri
+Dashboard Widget'ları:
+
+"Bu Ay Beklenen Toplam Ödeme" (Henüz ödenmemiş hakedişler).
+
+"Gecikmiş Öğrenci Ödemeleri" (Paket süresi bitmiş ama yenilenmemişler).
+
+Öğrenci Listesi:
+
+Öğrencilerin yanında kalan gün sayısını gösteren renkli bir "Badge" olsun (Örn: 5 Gün Kaldı [Kırmızı], 45 Gün Kaldı [Yeşil]).
+
+Excel Export (YENİ ÖZELLİK):
+
+Koç hakediş tablosunu ve Öğrenci listesini .xlsx veya .csv olarak indirebilmek için buton ekle. Muhasebe için gereklidir.
+
+4. Edge Case (İstisnai Durumlar) Yönetimi
+Boşluklu Yenileme: Bir öğrencinin paketi 10 Kasım'da bitti. Öğrenci 20 Kasım'da ödeme yaptı.
+
+Mantık: Koç, 10-20 Kasım arası (10 gün) için ücret ALMAMALIDIR. Sistem hakediş hesaplarken öğrencinin "Aktif" olduğu günleri baz almalı, sadece "Başlangıç - Bitiş" arasındaki günleri değil, paket bitiş tarihini aşan boşlukları düşmelidir.
+
+Koç Değişikliği: Öğrenci ayın ortasında Koç A'dan Koç B'ye geçerse ne olur?
+
+Mantık: (Bunu şimdilik basit tutalım ama altyapısını hazırla). Öğrenci modeline coach_id bağlanmalı.
+
+Özet ve Teslimat
+Lütfen bu mantığa göre:
+
+Veritabanı şemasını (SQL) güncelle.
+
+Backend API endpointlerini (Renewal, CalculatePayroll, MarkAsPaid) yaz.
+
+Frontend'de "Öğrenci Detay/Yenileme Modal"ı ve "Koç Hakediş Tablosu"nu yenile.
+
+Kodun temiz, modüler ve Neon Postgres ile tam uyumlu olduğundan emin ol.

@@ -1,0 +1,86 @@
+Rol: Senior Fintech Architect & Security Specialist. Durum: Sistem şu an hesaplamaları doğru yapıyor ancak "Global Ödeme Günü"nde (Batch Processing) yaşanabilecek ekstrem durumlar için korumasız. Görev: Ödeme dağıtım motorunu (distribute_payroll.js veya ilgili fonksiyonu) aşağıda belirtilen 4 Kritik Güvenlik Katmanı ile güncelle ve ardından test_doomsday.js ile bu katmanları delmeye çalış.
+
+BÖLÜM 1: GÜVENLİK VE MANTIK GÜNCELLEMELERİ
+1. Idempotency (Çift Ödeme Koruması) - En Kritik Madde
+Sorun: Admin yanlışlıkla "Ödemeleri Dağıt" butonuna iki kere tıkladı veya sunucu yanıt vermediği için tekrar denedi.
+
+Çözüm: Veritabanında (DB Level) bir Unique Constraint olmalı veya kod mantığı kontrol etmeli.
+
+Kural: Eğer bir koç için '2025-02' dönemine ait is_paid: true olan bir kayıt varsa, sistem ikinci isteği REDDETMELİDİR. Asla üzerine yazmamalı veya yeni kayıt açmamalıdır.
+
+2. Atomik İşlemler (Database Transactions)
+Sorun: 50 koça ödeme yapılıyor. 25. koçta sistem hata verdi. İlk 25'i "Ödendi" işaretlendi, kalan 25 "Bekliyor". Veri tutarsızlığı oluştu.
+
+Çözüm: Tüm ödeme dağıtım işlemi tek bir BEGIN... COMMIT/ROLLBACK bloğu içinde yapılmalıdır. Ya hepsi ödenir ya hiçbiri ödenmez.
+
+3. "Hayalet Koç" ve "Sıfır" Yönetimi
+Sorun: O ay hiç öğrencisi olmayan (veya tüm öğrencileri pasif olan) bir koç var.
+
+Risk: Division by zero veya Null hatası.
+
+Çözüm: Sistem bu koçları hesaplamaya dahil etmeli ama hakedişlerini 0.00 TL olarak kaydetmeli ve "Ödendi" olarak işaretleyip geçmelidir. Sistem çökmemelidir.
+
+4. "Son Saniye" Öğrencisi (The 11:59 PM Case)
+Senaryo: Öğrenci tam ödeme gününde (Ayın 28'i) sisteme girdi.
+
+Kural: O gün aktif sayılır. Koç 1 Günlük hakediş (35.48 TL) almalıdır. Sistem "0 gün" hesaplamamalıdır.
+
+BÖLÜM 2: "DOOMSDAY" TEST SENARYOSU (test_doomsday.js)
+Lütfen bu güvenlik önlemlerini kodladıktan sonra aşağıdaki testi çalıştır. Tolerans: SIFIR.
+
+Parametreler: Baz Maaş: 1100 TL | Baz Gün: 31 | Ödeme Günü: 28 Şubat.
+
+Senaryo A: "Çift Tıklama Saldırısı" (Idempotency Test)
+Adım 1: Koç Ahmet için Şubat ödemelerini hesapla ve onayla (status: PAID).
+
+Adım 2 (Saldırı): Aynı fonksiyonu (Şubat ayı için) TEKRAR çağır.
+
+Beklenen: Sistem hata fırlatmalı veya "Zaten ödendi" diyerek işlemi pas geçmeli.
+
+Kritik Kontrol: coach_payments tablosunda Ahmet için Şubat ayına ait SADECE 1 KAYIT olmalı. (2 kayıt varsa -> FAIL).
+
+Senaryo B: "Hayalet Koç" (The Zero Case)
+Durum: Koç "Mehmet" sisteme kayıtlı ama hiç öğrencisi yok.
+
+İşlem: Ödeme gününü çalıştır.
+
+Beklenen: Sistem çökmemeli. Mehmet için 0.00 TL tutarında bir bordro oluşturulmalı.
+
+Senaryo C: "Son Gün Sürprizi" (Last Minute Joiner)
+Durum: Öğrenci "Ali", tam 28 Şubat günü Koç "Zeynep" ile başladı.
+
+İşlem: Ödeme hesapla.
+
+Beklenen: Zeynep 28 Şubat günü aktifti.
+
+Hakediş: 1 Gün * (1100/31) = 35.48 TL. (0 TL çıkarsa -> FAIL).
+
+Senaryo D: "Geçmişi Değiştirme Girişimi" (Locked Period)
+Durum: Şubat ödemeleri kapatıldı (Paid).
+
+İşlem: Admin gidip Şubat ayındaki bir öğrencinin başlangıç tarihini değiştirmeye çalışıyor veya Şubat ayı için tekrar hesaplama yapmaya zorluyor.
+
+Beklenen: Sistem "Bu dönem kapatılmıştır, işlem yapılamaz" uyarısı vermeli. (Bu opsiyonel ama önerilir).
+
+ÇIKTI RAPORU (CONSOLE)
+Test bittiğinde konsola şu raporu bas:
+
+Plaintext
+
+☢️ MEDKAMPÜS DOOMSDAY SECURITY REPORT ☢️
+--------------------------------------------------
+1. [✔] IDEMPOTENCY (ÇİFT ÖDEME KORUMASI) ..... PASS
+       -> 2. İstek Reddedildi/Yoksayıldı ..... OK
+       -> DB'de Tek Kayıt Var ................ OK
+
+2. [✔] GHOST COACH HANDLING .................. PASS
+       -> 0 Öğrencili Koç Çökmedi ............ OK
+       -> Tutar 0.00 TL Olarak İşlendi ....... OK
+
+3. [✔] LAST MINUTE (28th JOINER) ............. PASS
+       -> 1 Günlük Ödeme (35.48 TL) Çıktı .... OK
+
+4. [✔] TRANSACTION SAFETY .................... PASS
+       -> Veri Bütünlüğü Korundu ............. OK
+--------------------------------------------------
+SONUÇ: SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️

@@ -1,0 +1,89 @@
+Rol: Senior Frontend Developer (UX Focused) & Backend Engineer. Görev: MedKampüs "Paket Yenileme" (Renewal) ekranını, kullanıcı hatalarını önleyecek ve işlemi hızlandıracak şekilde 3 Seçenekli Akıllı Modal yapısına çevir.
+
+1. UX/UI GELİŞTİRMESİ (Smart Renewal Modal)
+Admin panelindeki "Yenile" butonuna basıldığında açılan popup içinde bir Radio Button Group veya Tab Menü olmalı. Varsayılan olarak "Seçenek 1" seçili gelmeli.
+
+Seçenek 1: Hızlı Yenileme (Aynı Paket & Aynı Ücret)
+Açıklama: "Öğrenci mevcut tarifesinden devam ediyor."
+
+UI: Input alanları GİZLİ veya DISABLED (Salt Okunur) olur.
+
+Veri: Sistem, veritabanından öğrencinin son ödediği tutarı ve mevcut paket süresini otomatik çeker ve kullanır.
+
+Kullanım: En sık kullanılacak buton. Tek tıkla işlem biter.
+
+Seçenek 2: Fiyat Güncelleme (Aynı Paket & Yeni Ücret)
+Açıklama: "Paket süresi aynı (örn: 1 Ay) ama fiyata zam geldi."
+
+UI:
+
+Paket Seçimi: Gizli/Disabled (Eskisiyle aynı).
+
+Tutar Alanı: AÇIK. (Boş veya eski fiyat yazılı gelebilir, admin yenisini yazar).
+
+Seçenek 3: Paket Değişikliği (Farklı Paket & Yeni Ücret)
+Açıklama: "Öğrenci 1 aylıktan 3 aylık pakete geçiyor."
+
+UI:
+
+Paket Seçimi: AÇIK (Dropdown).
+
+Tutar Alanı: AÇIK (Admin manuel girer).
+
+2. BACKEND ENTEGRASYONU
+API (POST /renewals), gelen veriyi dinamik işlemelidir.
+
+Eğer frontend'den sadece renewal_mode: 'quick' gelirse -> DB'deki son kaydı kopyala.
+
+Eğer renewal_mode: 'price_update' gelirse -> Süreyi koru, yeni fiyatı kaydet.
+
+Eğer renewal_mode: 'package_switch' gelirse -> Yeni süre ve fiyatı kaydet.
+
+3. TEST SENARYOSU (test_smart_renewal.js)
+Lütfen bu geliştirmeyi yaptıktan sonra aşağıdaki ardışık senaryoyu test eden bir script çalıştır:
+
+Senaryo: "Öğrenci Ahmet'in Yolculuğu"
+
+Başlangıç (Setup): Ahmet 1 Aylık Paket (2000 TL) ile kayıtlı.
+
+Test 1 (Hızlı Yenileme):
+
+Admin "Seçenek 1"i seçti.
+
+Beklenen: student_payments tablosuna 2000 TL eklendi. Süre +1 Ay uzadı.
+
+Test 2 (Fiyat Güncelleme):
+
+Ahmet bir sonraki ay tekrar geldi ama zam geldi.
+
+Admin "Seçenek 2"yi seçti ve 2500 TL girdi.
+
+Beklenen: student_payments tablosuna 2500 TL eklendi. Süre +1 Ay uzadı. (Paket hala 1 aylık).
+
+Test 3 (Paket Değişimi):
+
+Ahmet memnun kaldı, uzun döneme geçmek istedi.
+
+Admin "Seçenek 3"ü seçti. 3 Aylık paket seçti ve 7000 TL girdi.
+
+Beklenen: student_payments tablosuna 7000 TL eklendi. Süre +3 Ay uzadı.
+
+ÇIKTI RAPORU
+Testi çalıştır ve konsola şu özeti bas:
+
+Plaintext
+
+=== AKILLI YENİLEME SİSTEMİ TESTİ ===
+
+1. MOD HIZLI YENİLEME (Quick)
+- Tutar (2000) Otomatik Algılandı mı? [EVET/HAYIR] -> PASS/FAIL
+- Süre (+1 Ay) Doğru Uzadı mı? -> PASS/FAIL
+
+2. MOD FİYAT GÜNCELLEME (Price Update)
+- Yeni Tutar (2500) İşlendi mi? -> PASS/FAIL
+- Süre (+1 Ay) Korundu mu? -> PASS/FAIL
+
+3. MOD PAKET DEĞİŞİMİ (Switch)
+- Yeni Tutar (7000) İşlendi mi? -> PASS/FAIL
+- Yeni Süre (+3 Ay) İşlendi mi? -> PASS/FAIL
+Lütfen kodu buna göre güncelle.

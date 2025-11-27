@@ -1,0 +1,133 @@
+Rol: Senior System Architect & Lead QA Engineer. Görev: MedKampüs Koçluk Sistemi'ni aşağıda belirtilen yeni ve katı iş kurallarına göre yeniden yapılandır (Refactor) ve ardından bu kuralların doğruluğunu kanıtlayan uçtan uca bir simülasyon testi (Test Script) çalıştır.
+
+BÖLÜM 1: YENİ İŞ KURALLARI VE MİMARİ (Architecture)
+1. Dinamik Finansal Yapı (Extreme Flexibility)
+Sistemin hesaplama parametreleri kod içinde sabit (hardcoded) OLMAMALIDIR. Veritabanında bir system_settings tablosu kurulmalıdır.
+
+Base Salary (Taban Maaş): Varsayılan 1100 TL (Admin değiştirebilir).
+
+Base Days (Baz Gün): Varsayılan 31 GÜN (Admin değiştirebilir).
+
+Formül: Günlük Koç Hakedişi = (Taban Maaş / Baz Gün).
+
+Örnek: 1100 / 31 = ~35.48 TL (Günlük).
+
+Şubat (28 Gün): Koç ~993 TL alır.
+
+Mayıs (31 Gün): Koç 1100 TL (Tam) alır.
+
+2. Sadeleştirilmiş Veri Modeli ve Zorunlu Alanlar
+Coaches Tablosu: Gereksiz detayları (Üniversite, Bölüm vb.) SİL.
+
+Zorunlu İletişim: Hem Koç hem Öğrenci için Telefon Numarası veritabanında NOT NULL (Boş geçilemez) olmalıdır. Telefonu olmayan kayıt yapılamaz.
+
+StudentPayments (Gelir) Tablosu: Öğrenciyi kaydederken veya paket yenilerken paid_amount (Ödenen Tutar) zorunlu olmalı. Bu bizim "GELİR" kalemimizdir.
+
+3. Gelir/Gider ve Kârlılık Raporu
+Admin panelinde şu formül çalışmalıdır: Toplam Net Kâr = (SUM(StudentPayments.amount)) - (SUM(CoachPayments.total_amount))
+
+BÖLÜM 2: VERİTABANI GÜNCELLEMESİ (Schema Update)
+Lütfen mevcut şemayı şu mantıkla güncelle (SQL Constraints'e dikkat et):
+
+SQL
+
+-- Ayarlar (Esneklik için)
+CREATE TABLE system_settings (
+  key VARCHAR PRIMARY KEY, -- örn: 'base_salary', 'base_days'
+  value VARCHAR -- örn: '1100', '31'
+);
+
+-- Koçlar (Sadeleştirilmiş ama İletişim Zorunlu)
+CREATE TABLE coaches (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone VARCHAR(20) NOT NULL, -- KESİNLİKLE ZORUNLU
+  email TEXT,
+  iban TEXT,
+  status TEXT DEFAULT 'Active'
+  -- Üniversite, bölüm vs sütunları YOK.
+);
+
+-- Öğrenciler (İletişim Zorunlu)
+CREATE TABLE students (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone VARCHAR(20) NOT NULL, -- KESİNLİKLE ZORUNLU
+  coach_id INTEGER REFERENCES coaches(id),
+  start_date DATE,
+  package_end_date DATE,
+  status TEXT DEFAULT 'Active'
+);
+
+-- Öğrenci Ödemeleri (Gelir Takibi)
+CREATE TABLE student_payments (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER REFERENCES students(id),
+  amount DECIMAL(10,2) NOT NULL, -- Gelir
+  payment_date DATE DEFAULT CURRENT_DATE,
+  package_duration_months INTEGER
+);
+
+-- Koç Hakedişleri (Gider Takibi)
+CREATE TABLE coach_payments (
+  id SERIAL PRIMARY KEY,
+  coach_id INTEGER REFERENCES coaches(id),
+  period_month VARCHAR(7), -- '2025-02'
+  total_amount DECIMAL(10,2),
+  is_paid BOOLEAN DEFAULT FALSE,
+  calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+BÖLÜM 3: ULTRA-MEGA KAPSAMLI TEST SENARYOSU (test_ultimate.js)
+Lütfen sistemi yukarıdaki yapıya göre güncelledikten sonra aşağıdaki senaryoları içeren bir test scripti çalıştır. Önemli: Test verilerini (seed data) oluştururken tüm koçlara ve öğrencilere rastgele bir telefon numarası (örn: "555-123-4567") atamalısın, yoksa NOT NULL hatası alırsın.
+
+Parametreler: Baz Maaş: 1100 TL | Baz Gün: 31 | Günlük: ~35.4838 TL
+
+Senaryo A: Şubat Ayı (Kısa Ay Testi)
+Durum: Öğrenci "Veli" (Tel: 555-111-2233), 1 Şubat - 1 Mart arası aktif (28 Gün).
+
+Öğrenci Ödemesi: 2000 TL (Gelir).
+
+Koç Hakedişi: 28 Gün * (1100/31).
+
+Beklenen Gider: ~993.55 TL.
+
+Beklenen Kâr: 2000 - 993.55 = 1006.45 TL.
+
+Test: Koç hakedişi 1100 TL çıkarsa FAIL ver.
+
+Senaryo B: 31 Günlük Ay (Tam Maaş Testi)
+Durum: Öğrenci "Can" (Tel: 555-999-8877), 1 Mayıs - 1 Haziran arası aktif (31 Gün).
+
+Beklenen Gider: 31 Gün * (1100/31) = 1100.00 TL.
+
+Test: Hedef 1100 TL.
+
+Senaryo C: Esneklik Testi (Canlı Konfigürasyon Değişimi)
+Aksiyon: Test sırasında DB'deki system_settings tablosundan base_salary değerini 3100 TL yap.
+
+Hesaplama: Aynı 31 günlük ay için hakedişi tekrar hesapla.
+
+Beklenen: Yeni hakediş 3100 TL olmalı.
+
+Senaryo D: Zorunlu Alan Testi (Constraint Check)
+Aksiyon: Telefon numarası olmayan bir koç eklemeye çalış (INSERT INTO coaches (name) VALUES ('No Phone Guy')).
+
+Beklenen: Veritabanı HATA (SQL Error) vermelidir. Sistem sessizce kaydetmemelidir.
+
+ÇIKTI BEKLENTİSİ
+Testi çalıştır ve konsola şu raporu bas:
+
+Plaintext
+
+=== MEDKAMPÜS FİNANSAL & YAPI TESTİ ===
+
+1. AYARLAR
+- Baz Gün: 31 / Baz Maaş: 1100 TL
+
+2. SENARYO SONUÇLARI
+- Şubat (28 Gün) Hakediş: [DEĞER] -> Beklenen: ~993.55 TL -> DURUM: [PASS/FAIL]
+- Mayıs (31 Gün) Hakediş: [DEĞER] -> Beklenen: 1100.00 TL -> DURUM: [PASS/FAIL]
+- Kâr/Zarar Hesabı: Net: [DEĞER] -> DURUM: [PASS/FAIL]
+
+3. VERİ GÜVENLİĞİ
+- Telefonsuz Koç Kaydı Engellendi mi? [EVET - HATA ALINDI/HAYIR] -> DURUM: [PASS/FAIL]
