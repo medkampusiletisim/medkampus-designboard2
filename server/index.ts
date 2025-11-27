@@ -9,6 +9,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -16,6 +17,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// Loglama Middleware'i
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -47,29 +49,33 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // 1. ÖNCE API Rotalarını Kaydet
   const server = await registerRoutes(app);
 
+  // 2. ERROR HANDLER (Hataları yakala)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
-    throw err;
+    // throw err; // Express'te response döndükten sonra throw yapmak genelde hataya sebep olur, kaldırdım.
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // 3. [KRİTİK DÜZELTME] API 404 KAPANI
+  // Eğer istek /api ile başlıyorsa ve yukarıdaki 'registerRoutes' bunu yakalamadıysa,
+  // HTML sayfasına düşmesine izin verme, 404 JSON dön.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ message: "API endpoint not found" });
+  });
+
+  // 4. Vite ve Statik Dosya Sunumu (Frontend)
+  // Sadece env development ise Vite'ı kur, değilse statik sun.
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // 5. Sunucuyu Başlat
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
