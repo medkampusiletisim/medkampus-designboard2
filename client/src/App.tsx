@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -5,12 +6,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+
+// Sayfalar
 import Dashboard from "@/pages/dashboard";
 import Students from "@/pages/students";
 import Coaches from "@/pages/coaches";
 import Payments from "@/pages/payments";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+import LockScreen from "@/pages/LockScreen"; // Pages içine eklediğin için
 
 function Router() {
   return (
@@ -26,6 +30,23 @@ function Router() {
 }
 
 export default function App() {
+  // --- KİLİT EKRANI MANTIĞI BAŞLANGIÇ ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Sayfa yüklenince tarayıcı hafızasına bak
+    const auth = localStorage.getItem("medkampus_auth");
+    if (auth === "true") {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Eğer giriş yapılmadıysa, SADECE Kilit Ekranını göster
+  if (!isAuthenticated) {
+    return <LockScreen onUnlock={() => setIsAuthenticated(true)} />;
+  }
+  // --- KİLİT EKRANI MANTIĞI BİTİŞ ---
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
