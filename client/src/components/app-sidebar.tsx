@@ -4,6 +4,7 @@ import {
   GraduationCap,
   DollarSign,
   Settings,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,11 @@ const menuItems = [
     title: "Ödemeler",
     url: "/payments",
     icon: DollarSign,
+  },
+  {
+    title: "Finansallar",
+    url: "/financials",
+    icon: TrendingUp,
   },
   {
     title: "Ayarlar",

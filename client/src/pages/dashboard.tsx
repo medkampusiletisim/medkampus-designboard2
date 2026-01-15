@@ -57,7 +57,7 @@ export default function Dashboard() {
           MedKampüs Dashboard
         </h1>
         <p className="text-sm text-muted-foreground">
-          Sistem özeti ve uyarılar (Mevcut Ay)
+          Sistem özeti ve uyarılar (Son 30 Gün)
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function Dashboard() {
         <Card data-testid="metric-monthly-revenue">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-status-online">
-              Aylık Ciro
+              Ciro (Son 30 Gün)
             </CardTitle>
             <DollarSign className="w-5 h-5 text-status-online" />
           </CardHeader>
@@ -167,7 +167,7 @@ export default function Dashboard() {
         <Card data-testid="metric-monthly-profit">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Aylık Net Kâr
+              Net Kâr (Son 30 Gün)
             </CardTitle>
             <TrendingUp className="w-5 h-5 text-status-online" />
           </CardHeader>
@@ -177,8 +177,8 @@ export default function Dashboard() {
             ) : (
               <>
                 <div className={`text-3xl font-semibold ${parseFloat(stats?.monthlyNetProfit || "0") >= 0
-                    ? "text-status-online"
-                    : "text-status-busy"
+                  ? "text-status-online"
+                  : "text-status-busy"
                   }`}>
                   {parseFloat(stats?.monthlyNetProfit || "0").toLocaleString("tr-TR", {
                     minimumFractionDigits: 2,

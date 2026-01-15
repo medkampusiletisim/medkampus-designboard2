@@ -17,7 +17,7 @@ import type {
   PayrollBreakdownItem,
   WorkPeriod,
 } from "@shared/schema";
-import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
+import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, subMonths, addMonths, subDays } from "date-fns";
 import * as XLSX from "xlsx";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -189,12 +189,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const monthlyFee = parseFloat(settings.coachMonthlyFee);
       const expectedMonthlyPayment = (activeStudents * monthlyFee).toFixed(2);
 
-      // Financials for Current Month
+      // Financials for Last 30 Days (as requested)
       const today = new Date();
-      const startOfMonthDate = format(startOfMonth(today), "yyyy-MM-dd");
-      const endOfMonthDate = format(endOfMonth(today), "yyyy-MM-dd");
+      const last30Days = subDays(today, 30);
+      const startDate = format(last30Days, "yyyy-MM-dd");
+      const endDate = format(today, "yyyy-MM-dd");
 
-      const financials = await storage.getFinancialSummaryByDateRange(startOfMonthDate, endOfMonthDate);
+      const financials = await storage.getFinancialSummaryByDateRange(startDate, endDate);
       const overdueCount = await storage.getOverdueStudentCount();
       const pendingPayroll = await storage.getPendingPayrollTotal();
 
