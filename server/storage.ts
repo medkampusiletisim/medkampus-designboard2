@@ -833,35 +833,42 @@ export class DatabaseStorage implements IStorage {
 
     let totalCoachCost = 0;
 
-    // Fetch all students (including archived) to calculate historical cost
-    const allStudents = await this.getAllStudentsIncludingArchived();
+    // REVISED COST LOGIC (User Request: "Immediately deduct coach cost for new sales/renewals")
+    // Instead of Accrual (Daily Rate * Active Days), we use Transactional Cost (Coach Monthly Fee per Transaction)
+    // Assumption: Each payment represents 1 month of service.
 
-    for (const student of allStudents) {
-      // Determine student's active work period within the requested range
-      const sStart = parseISO(student.packageStartDate);
-      const sEnd = parseISO(student.packageEndDate); // This is now trimmed by archive
+    // Iterate through INCOME PAYMENTS (not students) to calculate cost
+    for (const payment of incomePayments) {
+      // Find the student to check if they have a coach (though payments imply active student)
+      // Since we don't have student join in payment query easily, we'll assume valid coach cost if active.
+      // Better: Use packageDurationMonths if available, or default to 1 month.
 
-      const overlapStart = sStart > start ? sStart : start;
-      const overlapEnd = sEnd < end ? sEnd : end;
+      const durationMonths = payment.packageDurationMonths || 1;
 
-      if (overlapStart <= overlapEnd) {
-        const days = differenceInDays(overlapEnd, overlapStart) + 1;
-        totalCoachCost += days * dailyRate;
-      }
+      // Cost = Duration * CoachMonthlyFee
+      // This is the "Estimated Liability" created at the moment of sale
+      const liability = durationMonths * monthlyFee;
+
+      totalCoachCost += liability;
     }
 
     // 4. Expenses: Manual Expenses
-    // We need to fetch from 'expenses' table. 
-    // Since I can't easily import 'expenses' here without replacing top, I will assume it's available.
-    // If this fails, I'll fix imports.
-    /*
-      const expenseRecords = await db.select().from(expenses)
-        .where(and(gte(expenses.date, startDate), lte(expenses.date, endDate)));
-      const totalExpenses = expenseRecords.reduce((sum, e) => sum + parseFloat(e.amount), 0);
-    */
-    // TEMPORARY HACK: Return 0 until I fix imports/table
-    const totalExpenses = 0;
-    const expenseRecords: any[] = [];
+    const expenseRecords = await db
+      .select({
+        id: expenses.id,
+        description: expenses.description,
+        amount: expenses.amount,
+        category: expenses.category,
+        date: expenses.date,
+        notes: expenses.notes
+      })
+      .from(expenses)
+      .where(and(
+        gte(expenses.date, startDate),
+        lte(expenses.date, endDate)
+      ));
+
+    const totalExpenses = expenseRecords.reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
     // 5. Net Profit
     // User: "Bana gelen para (NetRevenue) - Koça Çıkacak (CoachCost) - Giderler"

@@ -16,6 +16,8 @@ import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import LockScreen from "@/pages/LockScreen"; // Pages içine eklediğin için
 
+import Financials from "@/pages/financials";
+
 function Router() {
   return (
     <Switch>
@@ -23,6 +25,7 @@ function Router() {
       <Route path="/students" component={Students} />
       <Route path="/coaches" component={Coaches} />
       <Route path="/payments" component={Payments} />
+      <Route path="/financials" component={Financials} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
