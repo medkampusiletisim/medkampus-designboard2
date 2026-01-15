@@ -37,6 +37,17 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Expenses table - NEW: Tracks manual expenses and transfer fees
+export const expenses = pgTable("expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull().default("general"), // general, transfer_fee, software, etc.
+  date: date("date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Coaches table (simplified - phone required)
 export const coaches = pgTable("coaches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -206,6 +217,13 @@ export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omi
   updatedAt: true,
 });
 
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  date: z.string(), // Provide as string for API
+});
+
 export const insertCoachSchema = createInsertSchema(coaches).omit({
   id: true,
   createdAt: true,
@@ -262,25 +280,18 @@ export const renewStudentPackageSchema = z.object({
 // Smart Renewal Mode Types
 export type SmartRenewalMode = "quick" | "price_update" | "package_switch";
 
-// Smart Renewal Request Schema - 3 modes:
-// 1. quick: Same package, same price (auto-fetches from last payment)
-// 2. price_update: Same package duration, new price
-// 3. package_switch: New package duration, new price
 export const smartRenewalSchema = z.discriminatedUnion("mode", [
-  // Mode 1: Quick Renewal - auto-fetch last payment data
   z.object({
     mode: z.literal("quick"),
     paymentDate: z.string().optional(),
     notes: z.string().optional(),
   }),
-  // Mode 2: Price Update - keep same package duration, new price
   z.object({
     mode: z.literal("price_update"),
     amount: z.string().min(1, "Tutar gerekli"),
     paymentDate: z.string().optional(),
     notes: z.string().optional(),
   }),
-  // Mode 3: Package Switch - new package duration and price
   z.object({
     mode: z.literal("package_switch"),
     packageMonths: z.number().min(1).max(12),
@@ -292,9 +303,12 @@ export const smartRenewalSchema = z.discriminatedUnion("mode", [
 
 export type SmartRenewalRequest = z.infer<typeof smartRenewalSchema>;
 
-// TypeScript types
+// Frontend Types
 export type SystemSettings = typeof systemSettings.$inferSelect;
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type Coach = typeof coaches.$inferSelect;
 export type InsertCoach = z.infer<typeof insertCoachSchema>;
@@ -316,17 +330,15 @@ export type InsertCoachPayroll = z.infer<typeof insertCoachPayrollSchema>;
 
 export type RenewStudentPackage = z.infer<typeof renewStudentPackageSchema>;
 
-// Additional types for frontend use
 export type StudentWithCoach = Student & {
   coach: Coach;
 };
 
 export type CoachWithStudents = Coach & {
   students: Student[];
-  iban?: string | null; // Explicitly include for exports/display
+  iban?: string | null;
 };
 
-// Work period for a student (for gap-aware calculations)
 export type WorkPeriod = {
   startDate: string;
   endDate: string;
@@ -338,7 +350,7 @@ export type PaymentBreakdownItem = {
   studentName: string;
   amount: string;
   daysWorked: number;
-  periods?: WorkPeriod[]; // For detailed period breakdown
+  periods?: WorkPeriod[];
 };
 
 export type CoachPaymentSummary = {
@@ -349,14 +361,13 @@ export type CoachPaymentSummary = {
   breakdown: PaymentBreakdownItem[];
 };
 
-// Payroll breakdown item (more detailed than PaymentBreakdownItem)
 export type PayrollBreakdownItem = {
   studentId: string;
   studentName: string;
   amount: string;
   daysWorked: number;
   periods: WorkPeriod[];
-  hasGaps: boolean; // True if there were inactive periods
+  hasGaps: boolean;
 };
 
 export type CoachPayrollSummary = {
@@ -367,24 +378,32 @@ export type CoachPayrollSummary = {
   totalAmount: string;
   breakdown: PayrollBreakdownItem[];
   status: "pending" | "paid";
-  payrollId?: string; // If already saved to database
+  payrollId?: string;
 };
 
-// Student with payment history
 export type StudentWithPayments = Student & {
   coach: Coach;
   studentPayments: StudentPayment[];
 };
 
-// Dashboard stats types
+// Updated Dashboard Stats for Financials
 export type DashboardStats = {
   activeCoaches: number;
   activeStudents: number;
-  expectedMonthlyPayment: string;
-  estimatedCommission: string;
-  pendingPayrollTotal: string; // New: unpaid coach payments
-  overdueStudentCount: number; // New: students with expired packages
+  monthlyRevenue: string; // Ciro (Sales)
+  monthlyNetProfit: string; // Net Kar (Revenue * 0.94 - Coach Costs - Expenses)
+  pendingPayrollTotal: string;
+  overdueStudentCount: number;
 };
 
-// Package status enum
-export type PackageStatus = "active" | "expiring" | "expired";
+export type FinancialSummary = {
+  revenue: number;
+  netRevenue: number; // Revenue * 0.94
+  coachCost: number;
+  expenses: number;
+  netProfit: number;
+  breakdown: {
+    income: StudentPayment[];
+    expenses: Expense[];
+  }
+};

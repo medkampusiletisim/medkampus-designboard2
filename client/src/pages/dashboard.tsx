@@ -24,9 +24,9 @@ type EnhancedDashboardStats = {
   expectedMonthlyPayment: string;
   pendingPayrollTotal: string;
   overdueStudentCount: number;
-  totalIncome: string;
-  totalExpense: string;
-  netProfit: string;
+  monthlyRevenue: string; // NEW
+  monthlyNetProfit: string; // NEW
+  medkampusCommission: string; // NEW
   baseDays: number;
 };
 
@@ -38,7 +38,7 @@ type RenewalAlert = {
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<EnhancedDashboardStats>({
-    queryKey: ["/api/dashboard/enhanced-stats"],
+    queryKey: ["/api/dashboard/stats"], // Updated endpoint to match standard
   });
 
   const { data: renewalAlerts, isLoading: alertsLoading } = useQuery<
@@ -57,7 +57,7 @@ export default function Dashboard() {
           MedKampüs Dashboard
         </h1>
         <p className="text-sm text-muted-foreground">
-          Sistem özeti ve uyarılar
+          Sistem özeti ve uyarılar (Mevcut Ay)
         </p>
       </div>
 
@@ -99,19 +99,20 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="metric-expected-payment">
+        {/* REPLACED: Expected Payment -> Monthly Revenue (Ciro) */}
+        <Card data-testid="metric-monthly-revenue">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Beklenen Aylık Ödeme
+            <CardTitle className="text-xs font-medium uppercase tracking-wide text-status-online">
+              Aylık Ciro
             </CardTitle>
-            <DollarSign className="w-5 h-5 text-muted-foreground" />
+            <DollarSign className="w-5 h-5 text-status-online" />
           </CardHeader>
           <CardContent>
             {statsLoading ? (
               <Skeleton className="h-10 w-32" />
             ) : (
-              <div className="text-3xl font-semibold text-foreground">
-                {parseFloat(stats?.expectedMonthlyPayment || "0").toLocaleString("tr-TR", {
+              <div className="text-3xl font-semibold text-status-online">
+                {parseFloat(stats?.monthlyRevenue || "0").toLocaleString("tr-TR", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })} ₺
@@ -162,10 +163,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="metric-net-profit">
+        {/* REPLACED: Cumulative Net Profit -> Monthly Net Profit */}
+        <Card data-testid="metric-monthly-profit">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Net Kâr
+              Aylık Net Kâr
             </CardTitle>
             <TrendingUp className="w-5 h-5 text-status-online" />
           </CardHeader>
@@ -174,19 +176,17 @@ export default function Dashboard() {
               <Skeleton className="h-10 w-32" />
             ) : (
               <>
-                <div className={`text-3xl font-semibold ${
-                  parseFloat(stats?.netProfit || "0") >= 0 
-                    ? "text-status-online" 
+                <div className={`text-3xl font-semibold ${parseFloat(stats?.monthlyNetProfit || "0") >= 0
+                    ? "text-status-online"
                     : "text-status-busy"
-                }`}>
-                  {parseFloat(stats?.netProfit || "0").toLocaleString("tr-TR", {
+                  }`}>
+                  {parseFloat(stats?.monthlyNetProfit || "0").toLocaleString("tr-TR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })} ₺
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Gelir: {parseFloat(stats?.totalIncome || "0").toLocaleString("tr-TR")} ₺ | 
-                  Gider: {parseFloat(stats?.totalExpense || "0").toLocaleString("tr-TR")} ₺
+                  Komisyon: {parseFloat(stats?.medkampusCommission || "0").toLocaleString("tr-TR")} ₺
                 </p>
               </>
             )}

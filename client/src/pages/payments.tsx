@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  DollarSign, 
-  Calendar, 
-  Check, 
-  Clock, 
+import {
+  ChevronDown,
+  ChevronRight,
+  DollarSign,
+  Calendar,
+  Check,
+  Clock,
   Calculator,
   ChevronLeft,
   Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarkPaidDialog } from "@/components/mark-paid-dialog";
 import {
   Table,
   TableBody,
@@ -47,6 +48,8 @@ function getPeriodLabel(period: string): string {
 export default function Payments() {
   const [expandedCoaches, setExpandedCoaches] = useState<Set<string>>(new Set());
   const [currentPeriod, setCurrentPeriod] = useState(getPeriodFromDate(new Date()));
+  const [markPaidDialogOpen, setMarkPaidDialogOpen] = useState(false);
+  const [selectedPayrollId, setSelectedPayrollId] = useState<string | undefined>();
   const { toast } = useToast();
 
   const { data: settings } = useQuery<SystemSettings>({
@@ -131,7 +134,7 @@ export default function Payments() {
   };
 
   const totalPayment = payrolls?.reduce(
-    (sum, payroll) => sum + parseFloat(payroll.totalAmount),
+    (sum: number, payroll: EnrichedCoachPayroll) => sum + parseFloat(payroll.totalAmount),
     0
   ) || 0;
 
@@ -321,8 +324,8 @@ export default function Payments() {
                   const isExpanded = expandedCoaches.has(payroll.id);
 
                   return (
-                    <TableRow 
-                      key={payroll.id} 
+                    <TableRow
+                      key={payroll.id}
                       className="group"
                       data-testid={`row-payroll-${payroll.id}`}
                     >
@@ -367,9 +370,9 @@ export default function Payments() {
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    markPaidMutation.mutate({ id: payroll.id });
+                                    setSelectedPayrollId(payroll.id);
+                                    setMarkPaidDialogOpen(true);
                                   }}
-                                  disabled={markPaidMutation.isPending}
                                   data-testid={`button-mark-paid-${payroll.id}`}
                                 >
                                   Ödendi İşaretle
@@ -433,6 +436,15 @@ export default function Payments() {
           )}
         </CardContent>
       </Card>
+
+      <MarkPaidDialog
+        open={markPaidDialogOpen}
+        onClose={() => {
+          setMarkPaidDialogOpen(false);
+          setSelectedPayrollId(undefined);
+        }}
+        payrollId={selectedPayrollId}
+      />
     </div>
   );
 }

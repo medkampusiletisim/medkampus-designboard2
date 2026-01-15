@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Pencil, Archive, Search, ArrowRightLeft, RefreshCw, Download } from "lucide-react";
+import { Plus, Pencil, Archive, Search, ArrowRightLeft, RefreshCw, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StudentDialog } from "@/components/student-dialog";
 import { TransferCoachDialog } from "@/components/transfer-coach-dialog";
 import { SmartRenewDialog } from "@/components/smart-renew-dialog";
+import { ArchiveStudentDialog } from "@/components/archive-student-dialog";
 import type { StudentWithCoach } from "@shared/schema";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -31,7 +32,7 @@ function getPackageStatus(endDate: string): PackageStatus {
 
 function DaysRemainingBadge({ endDate }: { endDate: string }) {
   const daysRemaining = differenceInDays(parseISO(endDate), new Date());
-  
+
   if (daysRemaining < 0) {
     return (
       <Badge className="bg-status-busy/10 text-status-busy border-status-busy/20">
@@ -80,6 +81,7 @@ export default function Students() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [renewDialogOpen, setRenewDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<
     StudentWithCoach | undefined
   >();
@@ -131,6 +133,16 @@ export default function Students() {
 
   const handleRenewClose = () => {
     setRenewDialogOpen(false);
+    setSelectedStudent(undefined);
+  };
+
+  const handleArchive = (student: StudentWithCoach) => {
+    setSelectedStudent(student);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleArchiveClose = () => {
+    setArchiveDialogOpen(false);
     setSelectedStudent(undefined);
   };
 
@@ -266,6 +278,16 @@ export default function Students() {
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleArchive(student)}
+                          data-testid={`button-archive-student-${student.id}`}
+                          title="Arşivle"
+                          className="text-status-busy hover:text-status-busy hover:bg-status-busy/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -291,6 +313,12 @@ export default function Students() {
       <SmartRenewDialog
         open={renewDialogOpen}
         onClose={handleRenewClose}
+        student={selectedStudent}
+      />
+
+      <ArchiveStudentDialog
+        open={archiveDialogOpen}
+        onClose={handleArchiveClose}
         student={selectedStudent}
       />
     </div>

@@ -1,15 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  insertCoachSchema, 
-  insertStudentSchema, 
+import {
+  insertCoachSchema,
+  insertStudentSchema,
   insertSystemSettingsSchema,
   renewStudentPackageSchema,
   smartRenewalSchema,
+  insertExpenseSchema, // Added
 } from "@shared/schema";
-import type { 
-  CoachPaymentSummary, 
+import type {
+  CoachPaymentSummary,
   PaymentBreakdownItem,
   Student,
   CoachPayrollSummary,
@@ -147,9 +148,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Revised Archive (PUT) - With Leave Date
+  app.put("/api/students/:id/archive", async (req, res) => {
+    try {
+      const { leaveDate } = req.body;
+      if (!leaveDate) {
+        return res.status(400).json({ message: "Ayrılma tarihi (leaveDate) gerekli" });
+      }
+      await storage.archiveStudent(req.params.id, leaveDate);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error archiving student:", error);
+      res.status(500).json({ message: "Failed to archive student" });
+    }
+  });
+
+  // Legacy Delete (Defaults to today)
   app.delete("/api/students/:id", async (req, res) => {
     try {
-      await storage.archiveStudent(req.params.id);
+      const today = format(new Date(), "yyyy-MM-dd");
+      await storage.archiveStudent(req.params.id, today);
       res.json({ success: true });
     } catch (error) {
       console.error("Error archiving student:", error);
@@ -171,20 +189,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const monthlyFee = parseFloat(settings.coachMonthlyFee);
       const expectedMonthlyPayment = (activeStudents * monthlyFee).toFixed(2);
 
-      // Commission is simplified - assuming packages paid upfront
-      // This is approximate based on average package length
-      const avgPackageMonths = students.length > 0 
-        ? students.reduce((sum, s) => sum + s.packageMonths, 0) / students.length 
-        : 3;
-      const totalStudentRevenue = activeStudents * monthlyFee * avgPackageMonths;
-      const totalCoachPayment = activeStudents * monthlyFee * avgPackageMonths;
-      const commission = (totalStudentRevenue - totalCoachPayment).toFixed(2);
+      // Financials for Current Month
+      const today = new Date();
+      const startOfMonthDate = format(startOfMonth(today), "yyyy-MM-dd");
+      const endOfMonthDate = format(endOfMonth(today), "yyyy-MM-dd");
+
+      const financials = await storage.getFinancialSummaryByDateRange(startOfMonthDate, endOfMonthDate);
+      const overdueCount = await storage.getOverdueStudentCount();
+      const pendingPayroll = await storage.getPendingPayrollTotal();
 
       res.json({
         activeCoaches,
         activeStudents,
-        expectedMonthlyPayment,
-        medkampusCommission: commission,
+        expectedMonthlyPayment, // Legacy
+        // NEW FIELDS
+        monthlyRevenue: financials.revenue.toFixed(2),
+        monthlyNetProfit: financials.netProfit.toFixed(2), // Real Net Profit (Rev*0.94 - Cost - Exp)
+        medkampusCommission: (financials.revenue * 0.06).toFixed(2), // Just for display
+        overdueStudentCount: overdueCount,
+        pendingPayrollTotal: pendingPayroll
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -255,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find the UPCOMING or CURRENT payment date (next payment day >= today)
       // This represents the payment we're currently accumulating for
       let currentPaymentDate = calculatePaymentDate(currentYear, currentMonth, paymentDay);
-      
+
       // If this month's payment day has already passed, move to next month
       if (currentPaymentDate < today) {
         currentPaymentDate = calculatePaymentDate(currentYear, currentMonth + 1, paymentDay);
@@ -284,10 +307,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build payment summaries by coach
-      const coachPayments = new Map<string, { 
-        coachName: string; 
-        breakdown: PaymentBreakdownItem[]; 
-        totalAmount: number 
+      const coachPayments = new Map<string, {
+        coachName: string;
+        breakdown: PaymentBreakdownItem[];
+        totalAmount: number
       }>();
 
       // Initialize all coaches
@@ -315,17 +338,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get transfer history for this student (all transfers, sorted oldest first)
         const allTransfers = await storage.getStudentTransferHistory(student.id);
-        const sortedTransfers = [...allTransfers].sort((a, b) => 
+        const sortedTransfers = [...allTransfers].sort((a, b) =>
           parseISO(a.transferDate).getTime() - parseISO(b.transferDate).getTime()
         );
-        
+
         // Find the coach at the start of the student's work period
         // If there are transfers before workStart, use the most recent one's newCoachId
         // Otherwise, find the original coach (oldCoachId from first transfer or currentCoachId if no transfers)
-        const transfersBeforeWorkStart = sortedTransfers.filter(t => 
+        const transfersBeforeWorkStart = sortedTransfers.filter(t =>
           parseISO(t.transferDate) < workStart
         );
-        
+
         let coachAtWorkStart: string;
         if (transfersBeforeWorkStart.length > 0) {
           // Use the most recent transfer before workStart
@@ -338,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // No transfers at all - student stayed with current coach
           coachAtWorkStart = currentCoachId;
         }
-        
+
         // Filter transfers that occurred during the student's work period
         const relevantTransfers = sortedTransfers
           .filter(t => {
@@ -361,11 +384,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // First period: from work start to first transfer
           const firstTransfer = relevantTransfers[0];
           const firstTransferDate = parseISO(firstTransfer.transferDate);
-          
+
           if (workStart < firstTransferDate) {
             const dayBeforeTransfer = new Date(firstTransferDate);
             dayBeforeTransfer.setDate(dayBeforeTransfer.getDate() - 1);
-            
+
             periods.push({
               coachId: coachAtWorkStart,
               start: workStart,
@@ -379,10 +402,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const nextTransfer = relevantTransfers[i + 1];
             const currentTransferDate = parseISO(currentTransfer.transferDate);
             const nextTransferDate = parseISO(nextTransfer.transferDate);
-            
+
             const dayBeforeNext = new Date(nextTransferDate);
             dayBeforeNext.setDate(dayBeforeNext.getDate() - 1);
-            
+
             if (currentTransferDate <= dayBeforeNext && currentTransferDate <= studentEnd) {
               periods.push({
                 coachId: currentTransfer.newCoachId,
@@ -395,7 +418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Last period: from last transfer to work end
           const lastTransfer = relevantTransfers[relevantTransfers.length - 1];
           const lastTransferDate = parseISO(lastTransfer.transferDate);
-          
+
           if (lastTransferDate <= workEnd) {
             periods.push({
               coachId: lastTransfer.newCoachId,
@@ -409,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Formula: dailyFee = baseSalary / baseDays (dynamic configuration)
         const baseDays = settings.baseDays || 31;
         const dailyFee = monthlyFee / baseDays;
-        
+
         for (const period of periods) {
           if (period.start <= period.end) {
             const daysWorked = differenceInDays(period.end, period.start) + 1;
@@ -542,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const validated = renewStudentPackageSchema.parse(req.body);
-      
+
       const result = await storage.renewStudentPackage(id, validated);
       res.json(result);
     } catch (error: any) {
@@ -559,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const validated = smartRenewalSchema.parse(req.body);
-      
+
       const result = await storage.smartRenewStudentPackage(id, validated);
       res.json(result);
     } catch (error: any) {
@@ -592,6 +615,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ FINANCIALS & EXPENSES ============
+
+  // Get financial summary for a custom date range
+  app.get("/api/financials/summary", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate required" });
+      }
+
+      const summary = await storage.getFinancialSummaryByDateRange(
+        startDate as string,
+        endDate as string
+      );
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching financial summary:", error);
+      res.status(500).json({ message: "Failed to fetch financial summary" });
+    }
+  });
+
+  // Get expenses list
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate required" });
+      }
+      const result = await storage.getExpenses(startDate as string, endDate as string);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  // Create new expense
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const validated = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense(validated);
+      res.json(expense);
+    } catch (error: any) {
+      console.error("Error creating expense:", error);
+      res.status(400).json({ message: error.message || "Failed to create expense" });
+    }
+  });
+
   // ============ COACH PAYROLLS (Period-based) ============
   // Get all coach payrolls
   app.get("/api/coach-payrolls", async (_req, res) => {
@@ -610,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { period } = req.params;
       const payrolls = await storage.getCoachPayrollsByPeriod(period);
       const coaches = await storage.getAllCoachesIncludingArchived();
-      
+
       // Enrich payrolls with coach names
       const enrichedPayrolls = payrolls.map(payroll => {
         const coach = coaches.find(c => c.id === payroll.coachId);
@@ -620,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paidAt: payroll.paymentDate ? payroll.paymentDate.toISOString() : null,
         };
       });
-      
+
       res.json(enrichedPayrolls);
     } catch (error) {
       console.error("Error fetching coach payrolls by period:", error);
@@ -632,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/coach-payrolls/calculate", async (req, res) => {
     try {
       const { periodMonth } = req.body; // Format: "2025-11"
-      
+
       if (!periodMonth || !/^\d{4}-\d{2}$/.test(periodMonth)) {
         return res.status(400).json({ message: "Invalid periodMonth format. Use YYYY-MM" });
       }
@@ -646,12 +719,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse the period
       const [year, month] = periodMonth.split("-").map(Number);
-      
+
       // Calculate cycle dates for this period
       // The cycle for period "2025-11" runs from the 29th of previous month to 28th of this month
       const periodDate = new Date(year, month - 1, paymentDay);
       const prevPeriodDate = subMonths(periodDate, 1);
-      
+
       const cycleStart = new Date(prevPeriodDate);
       cycleStart.setDate(cycleStart.getDate() + 1);
       const cycleEnd = periodDate;
@@ -663,9 +736,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build payment calculations (gap-aware, transfer-aware)
-      const coachPayments = new Map<string, { 
-        coachName: string; 
-        breakdown: PayrollBreakdownItem[]; 
+      const coachPayments = new Map<string, {
+        coachName: string;
+        breakdown: PayrollBreakdownItem[];
         totalAmount: number;
         coachId: string;
       }>();
@@ -693,25 +766,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get student payment history to check for gaps
         const studentPaymentHistory = await storage.getStudentPaymentHistory(student.id);
-        
+
         // Build active periods considering package gaps
         // A gap exists when previous package ended before current package started (renewal after expiry)
         const activePeriods: Array<{ start: Date; end: Date }> = [];
-        
+
         // For simplicity, we'll consider the current package only
         // If there are renewals with gaps, those gaps should not be paid
         // The gap is between previousEndDate and paymentDate in studentPayments
-        
+
         // Start with the full student work period
         let currentPeriodStart = workStart;
-        
+
         // Check if there were any renewals with gaps during this cycle
         const renewalsInCycle = studentPaymentHistory.filter(p => {
           const paymentDate = parseISO(p.paymentDate);
           const prevEnd = p.previousEndDate ? parseISO(p.previousEndDate) : null;
           // If previous end was before payment date (gap exists) and this happened in our cycle
-          return prevEnd && prevEnd < paymentDate && 
-                 paymentDate >= cycleStart && paymentDate <= cycleEnd;
+          return prevEnd && prevEnd < paymentDate &&
+            paymentDate >= cycleStart && paymentDate <= cycleEnd;
         });
 
         if (renewalsInCycle.length === 0) {
@@ -719,12 +792,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activePeriods.push({ start: workStart, end: workEnd });
         } else {
           // There were renewals with gaps - split periods
-          for (const renewal of renewalsInCycle.sort((a, b) => 
+          for (const renewal of renewalsInCycle.sort((a, b) =>
             parseISO(a.paymentDate).getTime() - parseISO(b.paymentDate).getTime()
           )) {
             const gapStart = parseISO(renewal.previousEndDate!);
             const gapEnd = parseISO(renewal.paymentDate);
-            
+
             // Add period before the gap
             if (currentPeriodStart < gapStart) {
               const periodEnd = gapStart < workEnd ? gapStart : workEnd;
@@ -732,11 +805,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 activePeriods.push({ start: currentPeriodStart, end: periodEnd });
               }
             }
-            
+
             // Move start to after the gap
             currentPeriodStart = gapEnd > currentPeriodStart ? gapEnd : currentPeriodStart;
           }
-          
+
           // Add remaining period after all gaps
           if (currentPeriodStart <= workEnd) {
             activePeriods.push({ start: currentPeriodStart, end: workEnd });
@@ -745,20 +818,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Now handle coach transfers for each active period
         const transfers = await storage.getStudentTransferHistory(student.id);
-        const sortedTransfers = [...transfers].sort((a, b) => 
+        const sortedTransfers = [...transfers].sort((a, b) =>
           parseISO(a.transferDate).getTime() - parseISO(b.transferDate).getTime()
         );
 
         // Formula: dailyFee = baseSalary / baseDays (dynamic configuration)
         const baseDays = settings.baseDays || 31;
         const dailyFee = monthlyFee / baseDays;
-        
+
         for (const activePeriod of activePeriods) {
           // Determine coach at start of this active period
-          const transfersBeforePeriod = sortedTransfers.filter(t => 
+          const transfersBeforePeriod = sortedTransfers.filter(t =>
             parseISO(t.transferDate) < activePeriod.start
           );
-          
+
           let coachAtPeriodStart: string;
           if (transfersBeforePeriod.length > 0) {
             coachAtPeriodStart = transfersBeforePeriod[transfersBeforePeriod.length - 1].newCoachId;
@@ -787,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // First period
             const firstTransfer = periodTransfers[0];
             const firstTransferDate = parseISO(firstTransfer.transferDate);
-            
+
             if (activePeriod.start < firstTransferDate) {
               const dayBefore = new Date(firstTransferDate);
               dayBefore.setDate(dayBefore.getDate() - 1);
@@ -806,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const nextDate = parseISO(next.transferDate);
               const dayBefore = new Date(nextDate);
               dayBefore.setDate(dayBefore.getDate() - 1);
-              
+
               if (currDate <= dayBefore) {
                 workPeriods.push({
                   coachId: curr.newCoachId,
@@ -838,7 +911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (coachData) {
                 // Check if student already exists in breakdown
                 const existingEntry = coachData.breakdown.find(b => b.studentId === student.id);
-                
+
                 if (existingEntry) {
                   // Add to existing entry
                   existingEntry.daysWorked += daysWorked;
@@ -874,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This prevents system crashes and ensures every coach has a payroll record
       const savedPayrolls = [];
       const entries = Array.from(coachPayments.entries());
-      
+
       for (const [coachId, data] of entries) {
         // GHOST COACH HANDLING: Create payroll even for 0 students (0.00 TL)
         const payroll = await storage.createOrUpdateCoachPayroll({
@@ -913,7 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ SECURITY LAYER: BATCH PAYMENT DISTRIBUTION ============
-  
+
   /**
    * SECURITY ENDPOINT: Toplu Ödeme Dağıtımı
    * - Idempotency: Çift ödeme koruması
@@ -927,15 +1000,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate period format
       if (!period || !/^\d{4}-\d{2}$/.test(period)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: "Geçersiz dönem formatı. YYYY-MM kullanın." 
+          message: "Geçersiz dönem formatı. YYYY-MM kullanın."
         });
       }
 
       // SECURITY: Atomik ve Idempotent ödeme dağıtımı
       const result = await storage.distributePayrollsWithTransaction(period, paidBy);
-      
+
       if (!result.success) {
         return res.status(409).json(result); // 409 Conflict for idempotency violations
       }
@@ -943,9 +1016,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("Error distributing payrolls:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        message: "Ödeme dağıtımı sırasında kritik hata oluştu." 
+        message: "Ödeme dağıtımı sırasında kritik hata oluştu."
       });
     }
   });
@@ -958,8 +1031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { period } = req.params;
       const isLocked = await storage.isPeriodAlreadyPaid(period);
-      res.json({ 
-        period, 
+      res.json({
+        period,
         isLocked,
         message: isLocked ? "Bu dönem kapatılmıştır." : "Bu dönem henüz açık."
       });
@@ -1001,7 +1074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use current month for realistic test (will have actual payroll data)
       const now = new Date();
       const testPeriod = format(now, "yyyy-MM");
-      
+
       const idempotencyTest = {
         name: "IDEMPOTENCY (ÇİFT ÖDEME KORUMASI)",
         status: "PASS" as "PASS" | "FAIL",
@@ -1012,16 +1085,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingPayrolls = await storage.getCoachPayrollsByPeriod(testPeriod);
       const idempPendingPayrolls = existingPayrolls.filter(p => p.status === "pending");
       const idempPaidPayrolls = existingPayrolls.filter(p => p.status === "paid");
-      
+
       idempotencyTest.details.push(`Dönem: ${testPeriod}`);
       idempotencyTest.details.push(`Mevcut Kayıtlar: ${existingPayrolls.length} (${idempPendingPayrolls.length} bekleyen, ${idempPaidPayrolls.length} ödendi)`);
 
       if (idempPaidPayrolls.length > 0) {
         // Period already has paid records - test idempotency directly
         idempotencyTest.details.push("Dönem zaten ödenmiş - Çift ödeme testi başlatılıyor...");
-        
+
         const doublePayAttempt = await storage.distributePayrollsWithTransaction(testPeriod, "DoubleClickTest");
-        
+
         if (!doublePayAttempt.success && doublePayAttempt.message.includes("zaten ödenmiş")) {
           idempotencyTest.details.push("Çift Ödeme Engellendi .............. OK");
           idempotencyTest.details.push(`Hata Mesajı: "${doublePayAttempt.message.substring(0, 50)}..."`);
@@ -1032,15 +1105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (idempPendingPayrolls.length > 0) {
         // Has pending payrolls - distribute then try again
         idempotencyTest.details.push("Bekleyen ödemeler mevcut - Test başlatılıyor...");
-        
+
         // First distribution should work
         const firstAttempt = await storage.distributePayrollsWithTransaction(testPeriod, "Test1");
         idempotencyTest.details.push(`1. İstek: ${firstAttempt.success ? "BAŞARILI" : "BAŞARISIZ"}`);
-        
+
         if (firstAttempt.success) {
           // Second attempt should be blocked (idempotency check)
           const secondAttempt = await storage.distributePayrollsWithTransaction(testPeriod, "Test2");
-          
+
           if (!secondAttempt.success && secondAttempt.message.includes("zaten ödenmiş")) {
             idempotencyTest.details.push("2. İstek Reddedildi ................ OK");
           } else {
@@ -1063,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, number>);
       const hasDoubles = Object.values(coachIdCounts).some(count => count > 1);
-      
+
       if (!hasDoubles) {
         idempotencyTest.details.push("DB'de Tek Kayıt Var ................ OK");
       } else {
@@ -1072,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       testResults.tests.push(idempotencyTest);
-      
+
       // Use current period payrolls for subsequent tests
       const payrolls = finalPayrolls;
 
@@ -1086,18 +1159,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find coaches with 0 students
       const allCoaches = await storage.getAllCoachesIncludingArchived();
       const allStudents = await storage.getAllStudentsIncludingArchived();
-      const ghostCoaches = allCoaches.filter(coach => 
+      const ghostCoaches = allCoaches.filter(coach =>
         !allStudents.some(s => s.coachId === coach.id && s.isActive === 1)
       );
 
       if (ghostCoaches.length > 0) {
         ghostCoachTest.details.push(`${ghostCoaches.length} adet 0 öğrencili koç bulundu`);
-        
+
         // Check if ghost coaches have 0.00 TL payrolls
-        const ghostPayrolls = payrolls.filter(p => 
+        const ghostPayrolls = payrolls.filter(p =>
           ghostCoaches.some(gc => gc.id === p.coachId)
         );
-        
+
         const allZero = ghostPayrolls.every(p => parseFloat(p.totalAmount) === 0);
         if (ghostPayrolls.length > 0 && allZero) {
           ghostCoachTest.details.push("0 Öğrencili Koç Çökmedi ............ OK");
@@ -1123,7 +1196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expectedOneDayPayment = dailyFee.toFixed(2);
       lastMinuteTest.details.push(`Beklenen 1 Günlük Ödeme: ${expectedOneDayPayment} TL`);
       lastMinuteTest.details.push(`Günlük Ücret Formülü: ${monthlyFee} / ${baseDays} = ${dailyFee.toFixed(2)} TL`);
-      
+
       // Verify the formula is correct
       if (Math.abs(dailyFee - (monthlyFee / baseDays)) < 0.01) {
         lastMinuteTest.details.push("1 Günlük Ödeme Hesaplaması ......... OK");
@@ -1144,7 +1217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify all payrolls in period have consistent status
       const txPaidPayrolls = payrolls.filter(p => p.status === "paid");
       const txPendingPayrolls = payrolls.filter(p => p.status === "pending");
-      
+
       // After distribute, should be all paid or all pending (not mixed from that operation)
       if (txPaidPayrolls.length === payrolls.length || txPendingPayrolls.length === payrolls.length) {
         transactionTest.details.push("Veri Bütünlüğü Korundu ............. OK");
@@ -1160,7 +1233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate final report
       const allPassed = testResults.tests.every(t => t.status === "PASS");
-      
+
       const report = `
 ☢️ MEDKAMPÜS DOOMSDAY SECURITY REPORT ☢️
 --------------------------------------------------
@@ -1181,7 +1254,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
       });
     } catch (error) {
       console.error("Doomsday test error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Test sırasında hata oluştu",
         error: error instanceof Error ? error.message : "Bilinmeyen hata"
       });
@@ -1229,7 +1302,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
   app.get("/api/export/students", async (_req, res) => {
     try {
       const students = await storage.getAllStudentsIncludingArchived();
-      
+
       const data = students.map(student => ({
         "Adı": student.firstName,
         "Soyadı": student.lastName,
@@ -1248,7 +1321,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
       XLSX.utils.book_append_sheet(wb, ws, "Öğrenciler");
 
       const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
-      
+
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=ogrenciler_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
       res.send(buffer);
@@ -1264,7 +1337,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
       const { period } = req.params;
       const payrolls = await storage.getCoachPayrollsByPeriod(period);
       const coaches = await storage.getAllCoachesIncludingArchived();
-      
+
       // Create summary sheet data
       const summaryData = payrolls.map(payroll => {
         const coach = coaches.find(c => c.id === payroll.coachId);
@@ -1290,7 +1363,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
           daysWorked: number;
           amount: string;
         }>;
-        
+
         for (const item of breakdown) {
           detailData.push({
             "Koç Adı": coachName,
@@ -1302,15 +1375,15 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
       }
 
       const wb = XLSX.utils.book_new();
-      
+
       const wsSummary = XLSX.utils.json_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, wsSummary, "Özet");
-      
+
       const wsDetail = XLSX.utils.json_to_sheet(detailData);
       XLSX.utils.book_append_sheet(wb, wsDetail, "Detay");
 
       const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
-      
+
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=hakedis_${period}.xlsx`);
       res.send(buffer);
@@ -1324,7 +1397,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
   app.get("/api/export/coaches", async (_req, res) => {
     try {
       const coaches = await storage.getAllCoachesIncludingArchived();
-      
+
       const data = coaches.map(coach => ({
         "Adı": coach.firstName,
         "Soyadı": coach.lastName,
@@ -1340,7 +1413,7 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
       XLSX.utils.book_append_sheet(wb, ws, "Koçlar");
 
       const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
-      
+
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=koclar_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
       res.send(buffer);
