@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { SystemSettings } from "@shared/schema";
+import { Settings2, Save, Calendar, Wallet } from "lucide-react";
 
 const settingsSchema = z.object({
   coachMonthlyFee: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
@@ -66,7 +67,7 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments/current-month"] });
       toast({
         title: "Başarılı",
-        description: "Ayarlar güncellendi",
+        description: "Sistem ayarları güncellendi",
       });
     },
     onError: (error: Error) => {
@@ -83,148 +84,182 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold gradient-text mb-2">Ayarlar</h1>
-        <p className="text-sm text-muted-foreground">
-          Sistem ayarlarını düzenle
+        <h1 className="text-4xl font-bold tracking-tight text-gradient-neon mb-2">Ayarlar</h1>
+        <p className="text-muted-foreground flex items-center gap-2">
+          <Settings2 className="w-4 h-4 text-primary" />
+          Sistem yapılandırması ve varsayılan değerleri yönetin
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Global Sistem Ayarları</CardTitle>
-          <CardDescription>
-            Bu ayarlar tüm koç ödemelerini ve hesaplamaları etkiler
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="glass-card border-none rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-primary/5 p-6 border-b border-primary/10">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Settings2 className="w-5 h-5 text-primary" />
+            Global Sistem Ayarları
+          </h2>
+          <p className="text-sm text-muted-foreground/80 mt-1">
+            Bu ayarlar tüm koç ödemelerini, hakediş hesaplamalarını ve sistem genelindeki varsayılanları etkiler.
+          </p>
+        </div>
+
+        <div className="p-6">
           {isLoading ? (
-            <div className="space-y-6">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-10 w-32" />
+            <div className="space-y-8">
+              <Skeleton className="h-24 w-full bg-white/5" />
+              <Skeleton className="h-24 w-full bg-white/5" />
+              <Skeleton className="h-24 w-full bg-white/5" />
+              <div className="flex justify-end pt-4">
+                <Skeleton className="h-10 w-32 bg-white/5" />
+              </div>
             </div>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                   control={form.control}
                   name="coachMonthlyFee"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Koç Aylık Sabit Hakediş Ücreti</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            className="max-w-xs"
-                            data-testid="input-coach-monthly-fee"
-                          />
-                        </FormControl>
-                        <span className="text-sm text-muted-foreground font-medium">
-                          ₺
-                        </span>
+                    <FormItem className="glass-card p-4 rounded-lg border-white/5 bg-white/[0.02]">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-primary/20 p-2 rounded-lg">
+                          <Wallet className="w-5 h-5 text-primary" />
+                        </div>
+                        <FormLabel className="text-lg font-medium">Koç Aylık Sabit Hakediş Ücreti</FormLabel>
                       </div>
-                      <FormDescription>
-                        Bir koçun her aktif öğrenci için aylık hak ettiği brüt ücret
-                      </FormDescription>
-                      <FormMessage />
+
+                      <div className="pl-12 space-y-2">
+                        <FormDescription className="text-muted-foreground/80 mb-2">
+                          Bir koçun her aktif öğrenci için hak ettiği aylık brüt ücret tutarıdır.
+                        </FormDescription>
+                        <div className="flex items-center gap-3">
+                          <FormControl>
+                            <div className="relative max-w-xs">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">₺</span>
+                              <Input
+                                {...field}
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="pl-8 h-12 text-lg font-bold bg-background/50 border-input/50 focus:ring-primary/50"
+                                data-testid="input-coach-monthly-fee"
+                              />
+                            </div>
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </div>
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="globalPaymentDay"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Global Koç Ödeme Günü</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            min="1"
-                            max="31"
-                            className="max-w-xs"
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value))
-                            }
-                            data-testid="input-payment-day"
-                          />
-                        </FormControl>
-                        <span className="text-sm text-muted-foreground font-medium">
-                          (Her Ayın)
-                        </span>
-                      </div>
-                      <FormDescription>
-                        MedKampüs'ün tüm koçlara toplu ödeme yapacağı sabit gün
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="globalPaymentDay"
+                    render={({ field }) => (
+                      <FormItem className="glass-card p-4 rounded-lg border-white/5 bg-white/[0.02]">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="bg-blue-500/20 p-2 rounded-lg">
+                            <Calendar className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <FormLabel className="text-base font-medium">Ödeme Günü</FormLabel>
+                        </div>
 
-                <FormField
-                  control={form.control}
-                  name="baseDays"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ay Bazı Gün Sayısı</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            min="28"
-                            max="31"
-                            className="max-w-xs"
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value))
-                            }
-                            data-testid="input-base-days"
-                          />
-                        </FormControl>
-                        <span className="text-sm text-muted-foreground font-medium">
-                          gün
-                        </span>
-                      </div>
-                      <FormDescription>
-                        Günlük ücret hesaplamasında kullanılacak baz gün sayısı. 
-                        Örnek: 31 gün için günlük ücret = Aylık Ücret / 31
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <div className="pl-12 space-y-2">
+                          <FormDescription className="text-xs mb-2">
+                            Her ayın kaçıncı günü ödeme yapılacak?
+                          </FormDescription>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                min="1"
+                                max="31"
+                                className="max-w-[100px] h-11 text-center font-bold bg-background/50 border-input/50 focus:ring-blue-500/50"
+                                onChange={(e) =>
+                                  field.onChange(parseInt(e.target.value))
+                                }
+                                data-testid="input-payment-day"
+                              />
+                            </FormControl>
+                            <span className="text-sm font-medium opacity-70">. Gün</span>
+                          </div>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="flex justify-end gap-3">
+                  <FormField
+                    control={form.control}
+                    name="baseDays"
+                    render={({ field }) => (
+                      <FormItem className="glass-card p-4 rounded-lg border-white/5 bg-white/[0.02]">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="bg-purple-500/20 p-2 rounded-lg">
+                            <Calendar className="w-5 h-5 text-purple-400" />
+                          </div>
+                          <FormLabel className="text-base font-medium">Ay Bazı Gün Sayısı</FormLabel>
+                        </div>
+
+                        <div className="pl-12 space-y-2">
+                          <FormDescription className="text-xs mb-2">
+                            Günlük ücret hesaplamasında kullanılan baz gün (örn: 30 veya 31).
+                          </FormDescription>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                min="28"
+                                max="31"
+                                className="max-w-[100px] h-11 text-center font-bold bg-background/50 border-input/50 focus:ring-purple-500/50"
+                                onChange={(e) =>
+                                  field.onChange(parseInt(e.target.value))
+                                }
+                                data-testid="input-base-days"
+                              />
+                            </FormControl>
+                            <span className="text-sm font-medium opacity-70">Gün</span>
+                          </div>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
                   <Button
                     type="button"
                     variant="ghost"
+                    size="lg"
                     onClick={() => form.reset()}
                     disabled={!form.formState.isDirty || mutation.isPending}
                     data-testid="button-reset"
+                    className="hover:bg-white/5 hover:text-foreground text-muted-foreground"
                   >
-                    İptal
+                    Değişiklikleri İptal Et
                   </Button>
                   <Button
                     type="submit"
+                    size="lg"
                     disabled={!form.formState.isDirty || mutation.isPending}
                     data-testid="button-save-settings"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.4)] transition-all duration-300 hover:scale-105 min-w-[150px]"
                   >
-                    {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+                    <Save className="w-5 h-5 mr-2" />
+                    {mutation.isPending ? "Kaydediliyor..." : "Ayarları Kaydet"}
                   </Button>
                 </div>
               </form>
             </Form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

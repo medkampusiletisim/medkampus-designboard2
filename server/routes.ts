@@ -175,6 +175,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ ANALYTICS ============
+  app.get("/api/dashboard/analytics", async (req, res) => {
+    try {
+      const months = parseInt(req.query.months as string) || 6;
+      const history = await storage.getFinancialHistory(months);
+      res.json(history);
+    } catch (error) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   // ============ DASHBOARD STATS ============
   app.get("/api/dashboard/stats", async (_req, res) => {
     try {
