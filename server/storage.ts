@@ -100,6 +100,10 @@ export interface IStorage {
   // Expenses
   createExpense(expense: any): Promise<any>;
   getExpenses(startDate: string, endDate: string): Promise<any[]>;
+  deleteExpense(id: string): Promise<void>;
+
+  // Analytics for Charts
+  getFinancialHistory(months: number): Promise<{ month: string; revenue: number; expense: number; profit: number }[]>;
 
   // Historical queries (include archived for payroll calculations)
   getAllStudentsIncludingArchived(): Promise<StudentWithCoach[]>;
@@ -150,7 +154,7 @@ export class DatabaseStorage implements IStorage {
           where: eq(students.isActive, 1),
         },
       },
-      orderBy: (coaches, { asc }) => [asc(coaches.firstName)],
+      orderBy: [asc(coaches.firstName)],
     });
     return allCoaches;
   }
@@ -868,7 +872,7 @@ export class DatabaseStorage implements IStorage {
         lte(expenses.date, endDate)
       ));
 
-    const totalExpenses = expenseRecords.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+    const totalExpenses = expenseRecords.reduce((sum: number, e: { amount: string }) => sum + parseFloat(e.amount), 0);
 
     // 5. Net Profit
     // User: "Bana gelen para (NetRevenue) - Koça Çıkacak (CoachCost) - Giderler"
@@ -1096,6 +1100,49 @@ export class DatabaseStorage implements IStorage {
       message: result.message,
       lockedCount: result.processedCount,
     };
+  }
+
+  async deleteExpense(id: string): Promise<void> {
+    await db.delete(expenses).where(eq(expenses.id, id));
+  }
+
+  async getFinancialHistory(months: number): Promise<{ month: string; revenue: number; expense: number; profit: number }[]> {
+    const history = [];
+    const today = new Date();
+
+    for (let i = 0; i < months; i++) {
+      const date = addMonths(today, -i);
+      // Ensure we get the full month for history
+      // e.g. If today is Jan 16, and we want "January" history, we should probably look at full month stats?
+      // Or maybe "Rolling 30 days" back?
+      // Standard practice for "Monthly History" charts is Calendar Months.
+
+      // Let's use Calendar Months relative to the current month.
+      // i=0 -> Current Month (Jan)
+      // i=1 -> Last Month (Dec)
+
+      // Calculate start and end of that specific month
+      const y = date.getFullYear();
+      const m = date.getMonth();
+      const startOfMonthDate = new Date(y, m, 1);
+      const endOfMonthDate = new Date(y, m + 1, 0); // Last day of month
+
+      const startStr = format(startOfMonthDate, "yyyy-MM-dd");
+      const endStr = format(endOfMonthDate, "yyyy-MM-dd");
+
+      // Reuse existing logic
+      const summary = await this.getFinancialSummaryByDateRange(startStr, endStr);
+
+      history.push({
+        month: format(startOfMonthDate, "MMMM yyyy"), // e.g. "January 2026"
+        revenue: summary.revenue,
+        expense: summary.coachCost + summary.expenses, // Total expenses
+        profit: summary.netProfit
+      });
+    }
+
+    // Return reversed so oldest is first (for charts left-to-right)
+    return history.reverse();
   }
 }
 

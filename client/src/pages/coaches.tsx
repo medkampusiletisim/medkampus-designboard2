@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Pencil, Search, Users, Download } from "lucide-react";
+import { Plus, Pencil, Search, Users, Download, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -57,66 +57,81 @@ export default function Coaches() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Koçlar</h1>
-          <p className="text-sm text-muted-foreground">
-            Tüm koçları yönet ve aktif öğrenci sayılarını görüntüle
+          <h1 className="text-4xl font-bold tracking-tight text-gradient-neon mb-2">Koçlar</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-primary" />
+            Takımınızdaki tüm koçları ve performanslarını yönetin
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport} data-testid="button-export-coaches">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            data-testid="button-export-coaches"
+            className="border-primary/20 hover:bg-primary/10 hover:text-primary transition-all duration-300"
+          >
             <Download className="w-4 h-4 mr-2" />
-            Excel İndir
+            Excel'e Aktar
           </Button>
-          <Button onClick={handleAdd} data-testid="button-add-coach">
-            <Plus className="w-4 h-4 mr-2" />
-            Yeni Koç
+          <Button
+            onClick={handleAdd}
+            data-testid="button-add-coach"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.4)] transition-all duration-300 hover:scale-105"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Yeni Koç Ekle
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="glass-card p-4 rounded-xl flex items-center gap-4 glow-sm">
+        <div className="relative flex-1 max-w-lg">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-primary/10 rounded-lg">
+            <Search className="w-4 h-4 text-primary" />
+          </div>
           <Input
-            placeholder="Koç ara..."
+            placeholder="Koç adı, e-posta veya telefon ile arayın..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-14 h-12 bg-background/50 border-input/50 focus:ring-primary/50 text-base"
             data-testid="input-search-coaches"
           />
         </div>
       </div>
 
-      <div className="border border-border rounded-md">
+      <div className="glass-card rounded-xl overflow-hidden shadow-2xl border-none">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-medium">Koç Adı</TableHead>
-              <TableHead className="font-medium">E-posta</TableHead>
-              <TableHead className="font-medium">Telefon</TableHead>
-              <TableHead className="font-medium">IBAN</TableHead>
-              <TableHead className="font-medium">Aktif Öğrenci</TableHead>
-              <TableHead className="text-right font-medium">İşlemler</TableHead>
+            <TableRow className="bg-primary/5 hover:bg-primary/10 border-b border-primary/10">
+              <TableHead className="font-semibold text-primary/80">Koç Adı</TableHead>
+              <TableHead className="font-semibold text-primary/80">E-posta</TableHead>
+              <TableHead className="font-semibold text-primary/80">Telefon</TableHead>
+              <TableHead className="font-semibold text-primary/80">IBAN</TableHead>
+              <TableHead className="font-semibold text-primary/80">Aktif Öğrenci</TableHead>
+              <TableHead className="text-right font-semibold text-primary/80">İşlemler</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
+                <TableRow key={i} className="border-b border-white/5">
                   {Array.from({ length: 6 }).map((_, j) => (
                     <TableCell key={j}>
-                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-6 w-full bg-white/5" />
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : filteredCoaches?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <p className="text-muted-foreground">Koç bulunamadı</p>
+                <TableCell colSpan={6} className="text-center py-12">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <Users className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="text-lg">Kayıtlı koç bulunamadı.</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -128,26 +143,32 @@ export default function Coaches() {
                 return (
                   <TableRow
                     key={coach.id}
-                    className={index % 2 === 1 ? "bg-muted/20" : ""}
+                    className={`
+                      border-b border-white/5 transition-colors hover:bg-white/5
+                      ${index % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}
+                    `}
                     data-testid={`coach-row-${coach.id}`}
                   >
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-foreground">
                       {coach.firstName} {coach.lastName}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-sm font-mono">
                       {coach.email}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-sm font-mono">
                       {coach.phone || "-"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
+                    <TableCell className="text-muted-foreground font-mono text-xs opacity-70">
                       {coachIban ? coachIban.substring(0, 8) + "..." : "-"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{activeStudents}</span>
-                      </div>
+                      <Badge variant="outline" className={`
+                        gap-2 px-3 py-1 bg-white/5 border-white/10
+                        ${activeStudents > 0 ? 'text-primary' : 'text-muted-foreground'}
+                      `}>
+                        <Users className="w-3 h-3" />
+                        <span className="font-bold">{activeStudents}</span>
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -155,6 +176,7 @@ export default function Coaches() {
                         size="icon"
                         onClick={() => handleEdit(coach)}
                         data-testid={`button-edit-coach-${coach.id}`}
+                        className="hover:text-warning hover:bg-warning/10 transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
