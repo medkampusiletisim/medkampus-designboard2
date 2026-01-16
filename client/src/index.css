@@ -1,74 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* 
-  MODERN JADE & NEON THEME
-  Inspired by NexusBank Dashboard
-  Dark Mode Only Application
+  SPACEX / SCI-FI THEME 
+  "Orbit Control"
 */
 :root {
-  /* No Light Mode Support - Force Dark Mode Variables */
-  --background: 145 15% 5%;
-  /* #0b0f0c - Almost black jade */
-  --foreground: 140 30% 96%;
-  /* #edfaf2 */
+  /* Deep Space Background */
+  --background: 220 20% 4%;
+  /* #080c14 */
+  --foreground: 180 10% 90%;
+  /* #e0fafa */
 
-  --card: 145 15% 8%;
-  /* #0f1411 */
-  --card-foreground: 140 30% 96%;
-  --card-border: 145 10% 12%;
+  --card: 220 25% 6%;
+  /* #0b101a */
+  --card-foreground: 180 10% 90%;
+  --card-border: 190 80% 40%;
 
-  --popover: 145 15% 8%;
-  --popover-foreground: 140 30% 96%;
+  --popover: 220 25% 8%;
+  --popover-foreground: 180 10% 90%;
 
-  /* Primary - Neon Jade/Green */
-  --primary: 155 65% 50%;
-  /* #2cdf7f */
-  --primary-foreground: 145 50% 10%;
+  /* Primary - Electric Cyan */
+  --primary: 180 100% 50%;
+  /* #00ffff */
+  --primary-foreground: 220 40% 10%;
 
-  --secondary: 155 30% 15%;
-  /* Darker green */
-  --secondary-foreground: 140 30% 96%;
+  /* Secondary - Holographic Purple */
+  --secondary: 270 50% 15%;
+  --secondary-foreground: 180 100% 50%;
 
-  --muted: 145 10% 15%;
-  --muted-foreground: 145 10% 60%;
+  --muted: 220 30% 15%;
+  --muted-foreground: 215 20% 65%;
 
-  --accent: 155 30% 20%;
-  --accent-foreground: 140 30% 96%;
+  --accent: 190 90% 20%;
+  --accent-foreground: 180 100% 90%;
 
-  --destructive: 0 65% 50%;
-  --destructive-foreground: 140 30% 96%;
+  --destructive: 0 80% 60%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 145 10% 15%;
-  --input: 145 10% 15%;
-  --ring: 155 65% 50%;
+  --border: 215 30% 15%;
+  --input: 215 30% 12%;
+  --ring: 180 100% 50%;
 
-  --radius: 1rem;
-  /* More rounded corners */
+  --radius: 0.25rem;
+  /* Sharp, tech corners */
+
+  /* Status Colors (Neon) */
+  --status-online: 150 100% 40%;
+  /* Neon Green */
+  --status-away: 40 100% 50%;
+  /* Neon Amber */
+  --status-busy: 0 100% 60%;
+  /* Neon Red */
 
   /* Sidebar */
-  --sidebar: 145 20% 4%;
-  --sidebar-foreground: 140 20% 90%;
-  --sidebar-primary: 155 65% 50%;
-  --sidebar-primary-foreground: 145 50% 10%;
-  --sidebar-accent: 155 30% 15%;
-  --sidebar-accent-foreground: 140 30% 96%;
-  --sidebar-border: 145 10% 10%;
-  --sidebar-ring: 155 65% 50%;
-
-  /* Status Colors */
-  --status-online: 145 75% 55%;
-  /* Green */
-  --status-away: 45 90% 60%;
-  /* Yellow/Gold */
-  --status-busy: 0 75% 60%;
-  /* Red */
-  --status-offline: 145 10% 50%;
-  /* Grey */
+  --sidebar: 220 25% 5%;
+  --sidebar-foreground: 215 20% 80%;
+  --sidebar-primary: 180 100% 50%;
+  --sidebar-primary-foreground: 220 40% 10%;
+  --sidebar-accent: 190 90% 15%;
+  --sidebar-accent-foreground: 180 100% 90%;
+  --sidebar-border: 215 30% 10%;
+  --sidebar-ring: 180 100% 50%;
 }
 
-/* Base Styles */
 @layer base {
   * {
     @apply border-border;
@@ -76,64 +75,14 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
-  }
-}
-
-/* Custom Utilities for "Cool" Look */
-@layer utilities {
-
-  /* Glass Cards */
-  .glass-card {
-    background: linear-gradient(145deg, hsl(145 15% 10% / 0.8), hsl(145 15% 8% / 0.8));
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(145 10% 15% / 0.5);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    font-family: 'Rajdhani', sans-serif;
+    background-image:
+      radial-gradient(circle at 15% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(188, 19, 254, 0.03) 0%, transparent 25%);
+    background-attachment: fixed;
   }
 
-  /* Neon Gradients */
-  .bg-gradient-neon {
-    background: linear-gradient(135deg, hsl(155 65% 45%) 0%, hsl(175 60% 40%) 100%);
-  }
-
-  .text-gradient-neon {
-    background: linear-gradient(135deg, hsl(155 65% 60%) 0%, hsl(175 60% 60%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Vibrant Cards (Like "Total Balance" in ref image) */
-  .card-vibrant {
-    background: linear-gradient(135deg, hsl(155 65% 50%) 0%, hsl(165 70% 35%) 100%);
-    color: hsl(145 60% 5%);
-    border: none;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .card-vibrant::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
-    transform: rotate(30deg);
-    pointer-events: none;
-  }
-
-  /* Soft Glow Shadows */
-  .glow-sm {
-    box-shadow: 0 0 10px hsl(155 65% 50% / 0.2);
-  }
-
-  .glow-md {
-    box-shadow: 0 0 20px hsl(155 65% 50% / 0.3);
-  }
-
-  /* Modern Scrollbar */
+  /* Scrollbar Styling for Sci-Fi Look */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -144,11 +93,116 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(145 10% 25%);
+    background: hsla(180, 100%, 50%, 0.2);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(155 65% 50%);
+    background: hsla(180, 100%, 50%, 0.5);
+  }
+}
+
+@layer utilities {
+
+  /* HUD Panels */
+  .hud-panel {
+    @apply relative overflow-hidden bg-black/40 border border-cyan-500/30 backdrop-blur-md transition-all duration-300;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.05);
+  }
+
+  .hud-panel:hover {
+    @apply border-cyan-400/50 shadow-[0_0_20px_rgba(0, 255, 255, 0.15)];
+  }
+
+  /* Corner Accents for HUD */
+  .hud-corners::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    border-top: 2px solid cyan;
+    border-left: 2px solid cyan;
+  }
+
+  .hud-corners::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-bottom: 2px solid cyan;
+    border-right: 2px solid cyan;
+  }
+
+  /* Glass Card overrides */
+  .glass-card {
+    @apply relative border-0 bg-white/5 backdrop-blur-xl transition-all duration-300;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Neon Text */
+  .text-neon-cyan {
+    color: #00ffff;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5), 0 0 10px rgba(0, 255, 255, 0.3);
+  }
+
+  .text-neon-purple {
+    color: #d000ff;
+    text-shadow: 0 0 5px rgba(208, 0, 255, 0.5);
+  }
+
+  /* Grid Background */
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  }
+
+  /* Animations */
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Text Gradient Neon for previous compat */
+  .text-gradient-neon {
+    background: linear-gradient(135deg, #00ffff 0%, #00aaff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+
+  .animate-scanline {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.2), transparent);
+    animation: scanline 4s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes scanline {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 1;
+    }
+
+    90% {
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
   }
 }

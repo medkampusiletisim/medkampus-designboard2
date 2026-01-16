@@ -47,7 +47,7 @@ interface FinancialSummary {
 }
 
 export default function Financials() {
-    const [dateRange, setDateRange] = useState<DateRangeOption>("this_month");
+    const [dateRange, setDateRange] = useState<DateRangeOption>("last_6_months");
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
     const [addExpenseOpen, setAddExpenseOpen] = useState(false);
