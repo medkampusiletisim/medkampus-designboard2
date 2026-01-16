@@ -111,7 +111,8 @@
   }
 
   .hud-panel:hover {
-    @apply border-cyan-400/50 shadow-[0_0_20px_rgba(0, 255, 255, 0.15)];
+    @apply border-cyan-400/50;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
   }
 
   /* Corner Accents for HUD */
