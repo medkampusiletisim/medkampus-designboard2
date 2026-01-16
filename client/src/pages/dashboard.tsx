@@ -5,15 +5,19 @@ import {
   TrendingUp,
   Activity,
   AlertTriangle,
-  XCircle,
   Zap,
-  Cpu,
-  Globe,
+  MoreHorizontal,
   Wallet,
-  ArrowUpRight
+  ArrowUpRight,
+  Search,
+  Plus,
+  CreditCard,
+  Bell
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   BarChart,
   Bar,
@@ -22,8 +26,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell
@@ -38,7 +40,6 @@ type EnhancedDashboardStats = {
   overdueStudentCount: number;
   monthlyRevenue: string;
   monthlyNetProfit: string;
-  medkampusCommission: string;
   baseDays: number;
   totalExpense: string;
 };
@@ -72,285 +73,267 @@ export default function Dashboard() {
   const expiringAlerts = renewalAlerts?.filter((a) => a.status === "expiring") || [];
   const expiredAlerts = renewalAlerts?.filter((a) => a.status === "expired") || [];
 
-  // Pie Chart Data Calculation
   const revenue = parseFloat(stats?.monthlyRevenue || "0");
   const profit = parseFloat(stats?.monthlyNetProfit || "0");
-  const expenses = revenue - profit; // Simplified calc
+  const expenses = revenue - profit;
 
   const pieData = [
-    { name: "Net Kâr", value: profit > 0 ? profit : 0, color: "#00ffff" },
-    { name: "Giderler", value: expenses > 0 ? expenses : 0, color: "#bc13fe" },
+    { name: "Net Kâr", value: profit > 0 ? profit : 0, color: "#00ffff" }, // Neon Cyan
+    { name: "Giderler", value: expenses > 0 ? expenses : 0, color: "#7c3aed" }, // Purply
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 p-2">
-      {/* HUD Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-6">
+    <div className="space-y-8 animate-in fade-in duration-700 p-2 max-w-[1600px] mx-auto">
+      {/* Top Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-5xl font-bold tracking-tighter text-neon-cyan uppercase drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
-            KOKPİT
-          </h1>
-          <p className="text-cyan-400/60 flex items-center gap-2 mt-1 font-mono tracking-widest text-xs">
-            <Globe className="w-3 h-3" />
-            SİSTEM DURUMU VE TELEMETRİ
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="bg-black/40 border-cyan-500/30 text-cyan-400 px-4 py-1 font-mono">
-            <Activity className="w-3 h-3 mr-2 animate-pulse" />
-            ONLINE
-          </Badge>
-          <div className="text-xs text-right text-cyan-500/50 font-mono">
-            MEDKAMPUS OS v2.4<br />
-            SECURE CONNECTION
-          </div>
-        </div>
-      </div>
-
-      {/* Hero KPIs - Holographic Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Main Revenue Display */}
-        <div className="col-span-1 md:col-span-2 hud-panel hud-corners rounded-xl p-8 relative overflow-hidden group">
-          <div className="absolute right-0 top-0 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Zap className="w-48 h-48 text-cyan-500" />
-          </div>
-
-          <div className="relative z-10 flex flex-col h-full justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Cpu className="w-4 h-4 text-cyan-400 animate-spin-slow" />
-                <span className="text-xs font-bold text-cyan-500 tracking-[0.2em] uppercase">Net Kâr (30 Gün)</span>
-              </div>
-              {statsLoading ? (
-                <Skeleton className="h-16 w-64 bg-cyan-900/20" />
-              ) : (
-                <div className="text-6xl font-bold text-white tracking-tighter drop-shadow-[0_0_15px_rgba(0,255,255,0.4)]">
-                  {Math.floor(profit).toLocaleString('tr-TR')}
-                  <span className="text-3xl text-cyan-500/70 ml-2">₺</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 flex items-center gap-8 border-t border-cyan-500/20 pt-4">
-              <div>
-                <div className="text-xs text-cyan-500/60 uppercase tracking-wider mb-1">Toplam Ciro</div>
-                <div className="text-xl font-mono text-cyan-300">
-                  {revenue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-cyan-500/60 uppercase tracking-wider mb-1">Büyüme</div>
-                <div className="text-xl font-mono text-emerald-400 flex items-center gap-1">
-                  <TrendingUp className="w-4 h-4" /> +12.4%
-                </div>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">KOKPİT</h1>
+          <p className="text-gray-400 text-sm mt-1">Hoş Geldiniz, Yönetici</p>
         </div>
 
-        {/* Small Metrics */}
-        <div className="grid grid-rows-2 gap-4 col-span-1">
-          {/* Active Coaches */}
-          <div className="hud-panel rounded-lg p-5 flex items-center justify-between hover:bg-cyan-900/10 transition-colors cursor-pointer group">
-            <div>
-              <p className="text-xs text-cyan-500/70 uppercase tracking-wider mb-1 group-hover:text-cyan-400">Aktif Koçlar</p>
-              <div className="text-3xl font-bold text-white font-mono">
-                {statsLoading ? "_" : stats?.activeCoaches}
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/30 group-hover:border-cyan-400 group-hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] transition-all">
-              <Users className="w-6 h-6 text-cyan-400" />
-            </div>
+        <div className="flex items-center gap-6 w-full md:w-auto">
+          <div className="relative group w-full md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-emerald-400 transition-colors" />
+            <Input
+              placeholder="Arama..."
+              className="pl-12 h-12 input-glass w-full"
+            />
           </div>
-
-          {/* Active Students */}
-          <div className="hud-panel rounded-lg p-5 flex items-center justify-between hover:bg-purple-900/10 transition-colors cursor-pointer group">
-            <div>
-              <p className="text-xs text-purple-400/70 uppercase tracking-wider mb-1 group-hover:text-purple-300">Aktif Öğrenciler</p>
-              <div className="text-3xl font-bold text-white font-mono">
-                {statsLoading ? "_" : stats?.activeStudents}
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/30 group-hover:border-purple-400 group-hover:shadow-[0_0_15px_rgba(188,19,254,0.3)] transition-all">
-              <GraduationCap className="w-6 h-6 text-purple-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Payroll Pending */}
-        <div className="hud-panel rounded-xl p-6 relative overflow-hidden bg-gradient-to-br from-black/60 to-orange-900/20 border-orange-500/30 border">
-          <div className="absolute top-0 right-0 p-4 opacity-20">
-            <AlertTriangle className="w-24 h-24 text-orange-500" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Wallet className="w-5 h-5 text-orange-400" />
-              <span className="text-sm font-bold text-orange-400 uppercase tracking-widest">ÖDEME BEKLEYEN</span>
-            </div>
-            <div className="text-4xl font-bold text-white mb-2 font-mono">
-              {statsLoading ? "..." : parseFloat(stats?.pendingPayrollTotal || "0").toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-            </div>
-            <div className="h-1 w-full bg-orange-900/30 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-500 w-[65%] shadow-[0_0_10px_orange]"></div>
-            </div>
-            <p className="text-xs text-orange-400/60 mt-2 font-mono">DÖNGÜ: 28 GÜN KALDI</p>
+          <Button size="icon" className="h-12 w-12 rounded-xl bg-black/40 border border-white/5 hover:bg-white/10 text-white relative">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+          </Button>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/20">
+            MK
           </div>
         </div>
       </div>
 
-      {/* Advanced Telemetry (Charts) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* Main Chart */}
-        <div className="lg:col-span-2 hud-panel rounded-xl p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Gelir Spektrumu
-            </h3>
-            <Badge variant="outline" className="bg-cyan-900/20 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 cursor-pointer">
-              SON 6 AY
-            </Badge>
-          </div>
+        {/* Left Column (Hero & Stats) */}
+        <div className="lg:col-span-2 space-y-8">
 
-          <div className="h-[350px] w-full">
-            {historyLoading ? (
-              <Skeleton className="h-full w-full bg-cyan-900/10" />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={history}>
-                  <defs>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#00ffff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0, 255, 255, 0.1)" />
-                  <XAxis
-                    dataKey="month"
-                    stroke="rgba(0, 255, 255, 0.5)"
-                    tickFormatter={(val) => val.split(" ")[0]}
-                    tick={{ fill: 'rgba(0, 255, 255, 0.7)', fontSize: 12, fontFamily: 'Rajdhani' }}
-                    axisLine={false}
-                    tickLine={false}
-                    dy={10}
-                  />
-                  <YAxis
-                    stroke="rgba(0, 255, 255, 0.5)"
-                    tickFormatter={(val) => `${val / 1000}k`}
-                    tick={{ fill: 'rgba(0, 255, 255, 0.7)', fontSize: 12, fontFamily: 'Rajdhani' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#050b14', border: '1px solid rgba(0,255,255,0.3)', color: '#fff' }}
-                    itemStyle={{ color: '#00ffff' }}
-                    labelStyle={{ color: '#aaa', marginBottom: '5px' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#bc13fe"
-                    strokeWidth={2}
-                    fill="transparent"
-                    name="Ciro"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stroke="#00ffff"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorProfit)"
-                    name="Net Kâr"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+          {/* HERO CARD & Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* The Hero Card */}
+            <div className="md:col-span-2 hero-card-gradient rounded-[30px] p-8 relative overflow-hidden group">
+              {/* Decorative 3D Elements */}
+              <div className="absolute right-[-20px] top-[-20px] opacity-20 pointer-events-none group-hover:opacity-30 transition-opacity duration-700">
+                <Zap className="w-64 h-64 text-emerald-400 drop-shadow-[0_0_30px_rgba(16,185,129,0.5)] rotate-12" />
+              </div>
 
-        {/* Pie Chart / Distribution */}
-        <div className="hud-panel rounded-xl p-6 flex flex-col">
-          <h3 className="text-lg font-bold text-neon-purple uppercase tracking-widest mb-6 border-b border-purple-500/20 pb-4">
-            Finansal Dağılım
-          </h3>
-          <div className="flex-1 min-h-[250px] relative">
-            {/* Center Tech Ring */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-32 h-32 rounded-full border border-dashed border-cyan-500/30 animate-spin-slow"></div>
-            </div>
-
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0.5)" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#050b14', border: '1px solid rgba(188, 19, 254, 0.3)', color: '#fff' }}
-                  formatter={(value: number) => `${value.toLocaleString('tr-TR')} ₺`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div className="text-center p-3 rounded bg-cyan-900/10 border border-cyan-500/20">
-              <div className="text-xs text-cyan-500/70 uppercase">Net Kâr</div>
-              <div className="text-lg font-bold text-white">{revenue > 0 ? Math.floor((profit / revenue) * 100) : 0}%</div>
-            </div>
-            <div className="text-center p-3 rounded bg-purple-900/10 border border-purple-500/20">
-              <div className="text-xs text-purple-500/70 uppercase">Gider</div>
-              <div className="text-lg font-bold text-white">{revenue > 0 ? Math.ceil((expenses / revenue) * 100) : 0}%</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Alerts - Styled as System Warnings */}
-      <div className="hud-panel rounded-xl overflow-hidden">
-        <div className="bg-red-950/30 p-3 border-b border-red-500/20 flex items-center justify-between">
-          <h3 className="text-red-500 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Kritik Bildirimler
-          </h3>
-          <span className="text-xs text-red-400/50 font-mono">SYSTEM_ALERT_LEVEL_1</span>
-        </div>
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {alertsLoading ? (
-            <Skeleton className="h-12 w-full bg-red-900/10" />
-          ) : [...expiringAlerts, ...expiredAlerts].length === 0 ? (
-            <div className="col-span-full text-center py-6 text-emerald-500/50 font-mono text-sm">
-              TÜM SİSTEMLER NORMAL. BİLDİRİM YOK.
-            </div>
-          ) : (
-            [...expiringAlerts, ...expiredAlerts].slice(0, 6).map((alert, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-red-900/5 border border-red-500/10 rounded hover:bg-red-900/10 transition-colors">
-                <div className="flex items-center gap-3">
-                  <XCircle className="w-5 h-5 text-red-500" />
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-8">
                   <div>
-                    <div className="text-sm font-bold text-red-200">{alert.student.firstName} {alert.student.lastName}</div>
-                    <div className="text-xs text-red-500/50 font-mono">{alert.student.coach.firstName} {alert.student.coach.lastName}</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20 backdrop-blur-md">
+                        <Wallet className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <span className="text-emerald-400 font-medium tracking-wide text-sm uppercase">Toplam Bakiye</span>
+                    </div>
+                    {statsLoading ? (
+                      <Skeleton className="h-16 w-64 bg-white/10 rounded-xl" />
+                    ) : (
+                      <h1 className="text-6xl font-bold text-white tracking-tighter drop-shadow-lg">
+                        {Math.floor(profit).toLocaleString('tr-TR')}
+                        <span className="text-3xl text-emerald-400/80 ml-2 font-normal">₺</span>
+                      </h1>
+                    )}
+                  </div>
+                  <div className="hidden md:block">
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-2 backdrop-blur-md text-sm">
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      +12.4% Artış
+                    </Badge>
                   </div>
                 </div>
-                <Badge variant="destructive" className="bg-red-950 text-red-500 border-red-900 font-mono">
-                  {alert.daysRemaining < 0 ? `-${Math.abs(alert.daysRemaining)} GÜN` : `${alert.daysRemaining} GÜN`}
-                </Badge>
+
+                <div className="flex items-end justify-between">
+                  <div className="flex gap-8">
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Aylık Ciro</p>
+                      <p className="text-xl font-semibold text-white">{revenue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Bekleyen</p>
+                      <p className="text-xl font-semibold text-orange-400">{parseFloat(stats?.pendingPayrollTotal || "0").toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</p>
+                    </div>
+                  </div>
+                  {/* "Add" Button Mockup */}
+                  <button className="h-14 w-14 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                    <Plus className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
-            ))
-          )}
+            </div>
+
+            {/* Quick Stat: Active Coaches */}
+            <div className="glass-card p-6 flex flex-col justify-between group hover:bg-white/5 cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="w-6 h-6" />
+                </div>
+                <MoreHorizontal className="text-gray-600" />
+              </div>
+              <div>
+                <h3 className="text-4xl font-bold text-white mb-1">{stats?.activeCoaches}</h3>
+                <p className="text-gray-400 text-sm">Aktif Profesyonel Koç</p>
+              </div>
+            </div>
+
+            {/* Quick Stat: Active Students */}
+            <div className="glass-card p-6 flex flex-col justify-between group hover:bg-white/5 cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                  <GraduationCap className="w-6 h-6" />
+                </div>
+                <MoreHorizontal className="text-gray-600" />
+              </div>
+              <div>
+                <h3 className="text-4xl font-bold text-white mb-1">{stats?.activeStudents}</h3>
+                <p className="text-gray-400 text-sm">Aktif Kayıtlı Öğrenci</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue Chart */}
+          <div className="glass-card p-8">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-semibold text-white">Gelir Analizi</h3>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-white cursor-pointer hover:bg-white/20">Aylık</span>
+                <span className="px-3 py-1 rounded-full text-xs font-medium text-gray-500 cursor-pointer hover:text-white">Yıllık</span>
+              </div>
+            </div>
+
+            <div className="h-[300px] w-full">
+              {historyLoading ? (
+                <Skeleton className="h-full w-full bg-white/5 rounded-2xl" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={history} barSize={40}>
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <XAxis
+                      dataKey="month"
+                      stroke="#6b7280"
+                      tickFormatter={(val) => val.split(" ")[0]}
+                      tick={{ fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
+                    />
+                    <YAxis hide />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                      contentStyle={{ backgroundColor: '#0b1210', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="url(#barGradient)"
+                      radius={[12, 12, 12, 12]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Right Column (Donut & Transactions) */}
+        <div className="space-y-8">
+
+          {/* Donut Chart */}
+          <div className="glass-card p-8 flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-white self-start mb-6">Finansal Dağılım</h3>
+            <div className="h-[250px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    innerRadius={70}
+                    outerRadius={90}
+                    paddingAngle={8}
+                    dataKey="value"
+                    stroke="none"
+                    cornerRadius={20}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Center Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-3xl font-bold text-white">{Math.floor((profit / revenue) * 100)}%</span>
+                <span className="text-xs text-gray-400 uppercase tracking-widest">Kâr Marjı</span>
+              </div>
+            </div>
+
+            <div className="w-full mt-6 space-y-4">
+              <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_cyan]" />
+                  <span className="text-sm text-gray-300">Net Kâr</span>
+                </div>
+                <span className="font-bold text-white">{Math.floor(profit).toLocaleString('tr-TR')} ₺</span>
+              </div>
+              <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_purple]" />
+                  <span className="text-sm text-gray-300">Giderler</span>
+                </div>
+                <span className="font-bold text-white">{Math.floor(expenses).toLocaleString('tr-TR')} ₺</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payments / Transactions List */}
+          <div className="glass-card p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-lg text-white">Bekleyen İşlemler</h3>
+              <Badge variant="outline" className="text-orange-400 border-orange-400/30 bg-orange-400/10">3 Adet</Badge>
+            </div>
+
+            <div className="space-y-4">
+              {expiringAlerts.slice(0, 3).map((alert, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors group cursor-pointer border border-transparent hover:border-white/10">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">{alert.student.firstName} {alert.student.lastName}</p>
+                      <p className="text-xs text-gray-400">{alert.daysRemaining} gün kaldı</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {[1, 2].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors group cursor-pointer border border-transparent hover:border-white/10">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">Otomatik Tahsilat</p>
+                      <p className="text-xs text-gray-400">Spotify Aboneliği</p>
+                    </div>
+                  </div>
+                  <span className="text-white font-medium">-240 ₺</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
