@@ -1406,6 +1406,20 @@ SONUÇ: ${allPassed ? "SİSTEM FİNANSAL FELAKETLERE KARŞI GÜVENLİ 🛡️" :
     }
   });
 
+  // Export coach payrolls to Excel (existing code...)
+
+  // ============ DASHBOARD ANALYTICS ============
+  app.get("/api/dashboard/analytics", async (req, res) => {
+    try {
+      const months = req.query.months ? parseInt(req.query.months as string) : 6;
+      const history = await storage.getFinancialHistory(months);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching financial history:", error);
+      res.status(500).json({ message: "Failed to fetch financial history" });
+    }
+  });
+
   // Export coaches to Excel
   app.get("/api/export/coaches", async (_req, res) => {
     try {

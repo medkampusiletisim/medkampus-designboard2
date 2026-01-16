@@ -215,14 +215,14 @@ export default function Dashboard() {
                   <BarChart data={history} barSize={40}>
                     <defs>
                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={1} />
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#d8b4fe" stopOpacity={1} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
                     <XAxis
                       dataKey="month"
-                      stroke="#6b7280"
+                      stroke="#9ca3af"
                       tickFormatter={(val) => val.split(" ")[0]}
                       tick={{ fontSize: 12 }}
                       axisLine={false}
@@ -231,7 +231,7 @@ export default function Dashboard() {
                     />
                     <YAxis hide />
                     <Tooltip
-                      cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                       contentStyle={{ backgroundColor: '#0b1210', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
                     />
                     <Bar
