@@ -1,71 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* 
-  MODERN GLASSMORPHISM & HIGH-END FINTECH
-  "Deep Forest / Neon Emerald"
+  AGGRESSIVE REDESIGN: ULTRA-HIGH-END GLASSMORPHISM
+  "Cyberpunk / Sci-Fi Fintech"
 */
+
 :root {
-  /* Base: Deep Forest Green / Almost Black */
-  --background: 165 24% 6%;
-  /* #0b1210 converted to HSL approx */
+  /* Base: Very Dark Charcoal/Teal */
+  --background: 180 10% 2%;
+  /* #050b0a */
   --foreground: 210 20% 90%;
 
-  --card: 165 24% 8%;
-  --card-foreground: 210 20% 90%;
-  --card-border: 165 20% 12%;
+  --card: 180 10% 3%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 0 0% 100%;
+  /* Handling transparency in util */
 
-  --popover: 165 24% 8%;
+  --popover: 180 10% 3%;
   --popover-foreground: 210 20% 90%;
 
-  /* Primary: Neon Emerald */
-  --primary: 158 93% 30%;
-  /* #059669 base, adjusted for neon pop in dark */
+  /* Neon Accents */
+  --primary: 158 82% 40%;
+  /* Emerald Neon */
   --primary-foreground: 0 0% 100%;
 
-  /* Ambient Colors */
-  --ambient-emerald: 158 93% 30%;
-  /* #059669 */
-  --ambient-purple: 262 83% 58%;
-  /* #7c3aed */
-
-  --secondary: 262 83% 58%;
+  --secondary: 262 80% 60%;
+  /* Purple Neon */
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 165 20% 15%;
-  --muted-foreground: 215 15% 65%;
+  --muted: 180 5% 15%;
+  --muted-foreground: 215 10% 60%;
 
-  --accent: 158 93% 40%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 180 100% 50%;
+  /* Cyan */
+  --accent-foreground: 0 0% 0%;
 
-  --destructive: 0 85% 60%;
+  --destructive: 0 90% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 165 20% 15%;
-  --input: 165 20% 10%;
-  /* Darker input bg */
-  --ring: 158 93% 40%;
+  --border: 0 0% 20%;
+  --input: 180 5% 10%;
+  --ring: 158 82% 50%;
 
   --radius: 1.5rem;
-  /* 24px Aggressive Rounding */
-
-  /* Status Colors */
-  --status-active: 150 100% 50%;
-  --status-pending: 35 100% 50%;
-  --status-error: 0 100% 65%;
-
-  /* Sidebar */
-  --sidebar: 165 24% 5%;
-  --sidebar-foreground: 210 15% 80%;
-  --sidebar-primary: 158 93% 40%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 165 20% 15%;
-  --sidebar-accent-foreground: 210 20% 95%;
-  --sidebar-border: 165 20% 12%;
-  --sidebar-ring: 158 93% 40%;
 }
 
 @layer base {
@@ -75,19 +57,62 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Poppins', sans-serif;
-    /* Ambient Glows: Top-Left Emerald, Bottom-Right Purple */
-    background-image:
-      radial-gradient(circle at 10% 10%, rgba(5, 150, 105, 0.25) 0%, transparent 40%),
-      radial-gradient(circle at 90% 90%, rgba(124, 58, 237, 0.20) 0%, transparent 40%);
-    background-attachment: fixed;
+    font-family: 'Outfit', sans-serif;
     overflow-x: hidden;
+    position: relative;
+    /* Massive Fixed Orbs Logic applied in pseudo-elements or specific background props below */
+    background-color: #050b0a;
   }
 
-  /* Custom Scrollbar */
+  /* Headings use Space Grotesk for that Sci-Fi feel */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  /* GRAIN TEXTURE & ORBS OVERLAY */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: -1;
+    /* Massive Orbs */
+    background:
+      radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.25) 0%, transparent 50%),
+      /* Neon Emerald */
+      radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.20) 0%, transparent 50%),
+      /* Deep Purple */
+      radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
+    /* Vignette */
+    filter: blur(60px);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.04;
+    /* SVG Noise Data URI */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* SCROLLBAR */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   ::-webkit-scrollbar-track {
@@ -95,81 +120,96 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsla(165, 20%, 30%, 0.4);
-    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 99px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsla(165, 20%, 40%, 0.6);
+    background: rgba(255, 255, 255, 0.3);
   }
 }
 
 @layer utilities {
 
-  /* THE GLASSPHOMISM CARD (Crucial) */
+  /* 
+    2. THE CARDS (The "Frosted Glass" Logic)
+    Drastically reduced opacity, high blur.
+  */
   .glass-card {
-    @apply relative overflow-hidden transition-all duration-300;
-    /* Semi-transparent dark gradient */
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-    /* Blur */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    /* Subtle Border */
+    position: relative;
+    overflow: hidden;
+    /* Linear gradient 3% to 1% white */
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    /* High Blur & Saturation */
+    backdrop-filter: blur(40px) saturate(150%);
+    -webkit-backdrop-filter: blur(40px) saturate(150%);
+    /* Thin subtle border */
     border: 1px solid rgba(255, 255, 255, 0.08);
-    /* Soft Shadow */
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    /* Inset shadow for depth */
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 8px 32px rgba(0, 0, 0, 0.2);
     border-radius: 24px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card:hover {
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-4px) scale(1.005);
+    box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.03), 0 20px 50px rgba(0, 0, 0, 0.4);
   }
 
-  /* Hero Card Special */
+  /* 3. HERO CARD SPECIAL - "The Nebula" */
   .hero-card-gradient {
-    background: linear-gradient(135deg, rgba(5, 150, 105, 0.4) 0%, rgba(11, 18, 16, 0.6) 100%);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px -5px rgba(5, 150, 105, 0.3);
+    /* Slightly more opaque for readability but still glassy */
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 11, 10, 0.4) 100%);
+    backdrop-filter: blur(50px) saturate(180%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 50px -10px rgba(16, 185, 129, 0.15);
   }
 
-  /* Floating Rows for Tables */
-  .floating-row {
-    @apply transition-all duration-200;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 12px;
-    border-radius: 16px;
+  /* 4. TYPOGRAPHY NEON VIBE */
+  .text-neon-glow {
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
   }
 
-  .floating-row:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: scale-[1.01];
+  .text-neon-emerald {
+    color: #34d399;
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
   }
 
-  /* Text Glows */
-  .text-glow-emerald {
-    text-shadow: 0 0 20px rgba(5, 150, 105, 0.6);
+  /* 5. SIDEBAR FLOATING DOCK */
+  .sidebar-floating {
+    @apply h-[calc(100vh-2rem)] my-4 ml-4 rounded-[32px] border border-white/5 bg-black/20 backdrop-blur-3xl shadow-[0_0_40px_rgba(0, 0, 0, 0.5)];
   }
 
-  .text-glow-white {
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-  }
-
-  /* Input Fields */
+  /* INPUTS */
   .input-glass {
-    @apply bg-black/30 border-0 text-white rounded-xl transition-all duration-300;
+    @apply bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl transition-all duration-300;
   }
 
   .input-glass:focus {
-    @apply ring-0;
-    box-shadow: 0 4px 20px -5px rgba(5, 150, 105, 0.4);
-    background: rgba(0, 0, 0, 0.4);
+    @apply ring-1 ring-emerald-500/50 bg-white/10;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
   }
 
-  .animate-float-slow {
-    animation: float 8s ease-in-out infinite;
+  /* Recharts Neon Overrides */
+  /* This targets the SVG elements directly if possible, primarily specific to recharts */
+}
+
+/* Global Animation Utilities */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
   }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }

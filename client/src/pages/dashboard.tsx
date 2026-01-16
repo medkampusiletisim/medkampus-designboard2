@@ -130,21 +130,21 @@ export default function Dashboard() {
                       <div className="p-1.5 rounded-lg bg-emerald-500/20 backdrop-blur-md">
                         <Wallet className="w-4 h-4 text-emerald-400" />
                       </div>
-                      <span className="text-emerald-400 font-medium tracking-wide text-sm uppercase">Toplam Bakiye</span>
+                      <span className="text-emerald-400 font-medium tracking-wide text-sm uppercase font-[Space_Grotesk]">Toplam Bakiye</span>
                     </div>
                     {statsLoading ? (
-                      <Skeleton className="h-16 w-64 bg-white/10 rounded-xl" />
+                      <Skeleton className="h-20 w-80 bg-white/10 rounded-3xl" />
                     ) : (
-                      <h1 className="text-6xl font-bold text-white tracking-tighter drop-shadow-lg">
+                      <h1 className="text-7xl font-bold text-white tracking-tighter text-neon-glow font-[Space_Grotesk]">
                         {Math.floor(profit).toLocaleString('tr-TR')}
-                        <span className="text-3xl text-emerald-400/80 ml-2 font-normal">₺</span>
+                        <span className="text-4xl text-emerald-400/80 ml-2 font-light">₺</span>
                       </h1>
                     )}
                   </div>
                   <div className="hidden md:block">
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-2 backdrop-blur-md text-sm">
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-2 backdrop-blur-md text-sm font-[Space_Grotesk]">
                       <TrendingUp className="w-4 h-4 mr-2" />
-                      +12.4% Artış
+                      +12.4% BOOST
                     </Badge>
                   </div>
                 </div>
