@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,9 +14,9 @@ import Coaches from "@/pages/coaches";
 import Payments from "@/pages/payments";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
-import LockScreen from "@/pages/LockScreen"; // Pages içine eklediğin için
-
+import LockScreen from "@/pages/LockScreen";
 import Financials from "@/pages/financials";
+import Packages from "@/pages/packages";
 
 function Router() {
   return (
@@ -33,6 +33,8 @@ function Router() {
 }
 
 export default function App() {
+  const [location] = useLocation();
+
   // --- KİLİT EKRANI MANTIĞI BAŞLANGIÇ ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -44,7 +46,23 @@ export default function App() {
     }
   }, []);
 
+  // Special Route for Packages (Full Screen, No Sidebar) - PUBLIC ACCESS
+  if (location === "/paketler") {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Packages />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
   // Eğer giriş yapılmadıysa, SADECE Kilit Ekranını göster
+  // Not: Paketler sayfasına herkesin girmesini istiyorsak buradaki check'i ona göre ayarlamalıyız.
+  // Kullanıcı "medkampus-designboard2 projemizde" dediği için muhtemelen auth gerekli.
+  // Ama URL paylaşımı yapılacaksa belki public olmalı? 
+  // Güvenli taraf: Auth gerekli olsun. 
   if (!isAuthenticated) {
     return <LockScreen onUnlock={() => setIsAuthenticated(true)} />;
   }
