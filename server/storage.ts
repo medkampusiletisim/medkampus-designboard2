@@ -131,7 +131,8 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     this.sessionStore = new PostgresSessionStore({
       pool,
-      createTableIfMissing: true,
+      createTableIfMissing: false, // Drizzle manages the table creation
+      tableName: "sessions", // Match the Drizzle schema table name
     });
   }
 
