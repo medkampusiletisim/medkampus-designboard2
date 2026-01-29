@@ -24,6 +24,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize system settings
   await storage.initializeSettings();
 
+  // Synapse Protocol Integration
+  app.use("/api/integrations", (await import("./integrations")).default);
+
   // ============ SYSTEM SETTINGS ============
   app.get("/api/settings", async (_req, res) => {
     try {

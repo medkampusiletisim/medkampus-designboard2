@@ -57,7 +57,7 @@ app.use((req, res, next) => {
   // Giriş yapmamış kullanıcıların API'ye erişimini engelle
   app.use("/api", (req, res, next) => {
     // Public rotalara izin ver
-    const publicRoutes = ["/api/login", "/api/logout", "/api/user", "/api/health"];
+    const publicRoutes = ["/api/login", "/api/logout", "/api/user", "/api/health", "/api/integrations/webhook"];
     if (publicRoutes.includes(req.path)) {
       return next();
     }
