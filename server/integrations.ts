@@ -105,7 +105,7 @@ function sanitizePhone(phone: string): string {
 }
 
 // Helper to find student
-async function findStudent(email: string, phone: string, oldEmail?: string) {
+async function findStudent(email: string, phone: string, oldEmail?: string, name?: { first: string, last: string }) {
     const students = await storage.getAllStudentsIncludingArchived();
 
     // Aggressive normalization: lowercase + remove ALL whitespace
@@ -113,7 +113,7 @@ async function findStudent(email: string, phone: string, oldEmail?: string) {
     const cleanOldEmail = oldEmail?.toLowerCase().replace(/\s+/g, "");
 
     // Log the search attempt for debugging
-    console.log(`[Synapse Debug] Searching Student -> New: '${cleanEmail}', Old: '${cleanOldEmail || "N/A"}', Phone: '${phone}'`);
+    console.log(`[Synapse Debug] Searching -> New:'${cleanEmail}', Old:'${cleanOldEmail || "N/A"}', Phone:'${phone}'` + (name ? `, Name:'${name.first} ${name.last}'` : ""));
 
     // 1. Try Primary Email
     let match = students.find(s => s.email?.toLowerCase().replace(/\s+/g, "") === cleanEmail);
@@ -143,6 +143,22 @@ async function findStudent(email: string, phone: string, oldEmail?: string) {
         if (match) {
             console.log(`[Synapse Debug] Found by phone similarity: ${match.id} (DB: ${match.phone}, In: ${phone})`);
             return match;
+        }
+    }
+
+    // 4. Try Full Name (Exact Case-Insensitive Match)
+    if (name) {
+        const cleanName = (name.first + name.last).toLowerCase().replace(/\s+/g, "");
+        // length check to avoid "Ali Efe" common name clashes 
+        if (cleanName.length >= 5) {
+            match = students.find(s => {
+                const dbName = (s.firstName + s.lastName).toLowerCase().replace(/\s+/g, "");
+                return dbName === cleanName;
+            });
+            if (match) {
+                console.log(`[Synapse Debug] Found by EXACT name match: ${match.id} (${match.firstName} ${match.lastName})`);
+                return match;
+            }
         }
     }
 
@@ -212,7 +228,7 @@ router.post("/webhook", async (req, res) => {
             }
 
             // B. Handle Student (Upsert)
-            let student = await findStudent(sData.email, sData.phone);
+            let student = await findStudent(sData.email, sData.phone, undefined, { first: sData.firstName, last: sData.lastName });
             const pkgEndDate = format(addMonths(new Date(pData.startDate), pData.months), "yyyy-MM-dd");
 
             if (student) {
@@ -321,7 +337,7 @@ router.post("/webhook", async (req, res) => {
             const { oldEmail, newEmail, phone, firstName, lastName } = event.payload;
 
             // Try to find using oldEmail or newEmail or phone
-            const student = await findStudent(newEmail, phone, oldEmail);
+            const student = await findStudent(newEmail, phone, oldEmail, { first: firstName, last: lastName });
 
             if (student) {
                 console.log(`[Synapse] Syncing Student Data: ${student.email} -> ${newEmail}`);
