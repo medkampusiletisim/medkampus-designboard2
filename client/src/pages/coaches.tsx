@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Pencil, Search, Users, Download, UserCheck } from "lucide-react";
+import { Plus, Pencil, Search, Users, Download, UserCheck, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import type { CoachWithStudents } from "@shared/schema";
 export default function Coaches() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [selectedCoach, setSelectedCoach] = useState<
     CoachWithStudents | undefined
   >();
@@ -26,6 +27,25 @@ export default function Coaches() {
   const { data: coaches, isLoading } = useQuery<CoachWithStudents[]>({
     queryKey: ["/api/coaches"],
   });
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   const filteredCoaches = coaches?.filter((coach) => {
     const searchLower = searchTerm.toLowerCase();
@@ -35,6 +55,32 @@ export default function Coaches() {
       coach.email.toLowerCase().includes(searchLower) ||
       coach.phone?.toLowerCase().includes(searchLower)
     );
+  }).sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    let aValue: any = a;
+    let bValue: any = b;
+
+    if (sortConfig.key === 'activeStudents') {
+      aValue = a.students?.filter(s => s.isActive === 1).length || 0;
+      bValue = b.students?.filter(s => s.isActive === 1).length || 0;
+    } else {
+      aValue = aValue[sortConfig.key as keyof CoachWithStudents];
+      bValue = bValue[sortConfig.key as keyof CoachWithStudents];
+    }
+
+    if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+
+    if (aValue < bValue) {
+      return sortConfig.direction === "asc" ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortConfig.direction === "asc" ? 1 : -1;
+    }
+    return 0;
   });
 
   const handleEdit = (coach: CoachWithStudents) => {
@@ -106,11 +152,23 @@ export default function Coaches() {
         <Table>
           <TableHeader>
             <TableRow className="bg-primary/5 hover:bg-primary/10 border-b border-primary/10">
-              <TableHead className="font-semibold text-primary/80">Koç Adı</TableHead>
-              <TableHead className="font-semibold text-primary/80">E-posta</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("firstName")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Koç Adı {getSortIcon("firstName")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("email")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  E-posta {getSortIcon("email")}
+                </Button>
+              </TableHead>
               <TableHead className="font-semibold text-primary/80">Telefon</TableHead>
               <TableHead className="font-semibold text-primary/80">IBAN</TableHead>
-              <TableHead className="font-semibold text-primary/80">Aktif Öğrenci</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("activeStudents")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Aktif Öğrenci {getSortIcon("activeStudents")}
+                </Button>
+              </TableHead>
               <TableHead className="text-right font-semibold text-primary/80">İşlemler</TableHead>
             </TableRow>
           </TableHeader>

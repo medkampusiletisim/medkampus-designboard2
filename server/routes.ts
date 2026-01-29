@@ -133,6 +133,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertStudentSchema.parse(req.body);
       const student = await storage.createStudent(validated);
+
+      // Synapse Sync (Ops -> App)
+      try {
+        const synapse = (await import("./services/synapse")).synapse;
+        synapse.notifyStudentCreated({
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          phone: student.phone,
+          packageEndDate: student.packageEndDate
+        }).catch(err => console.error("Synapse Sync Error:", err));
+      } catch (e) {
+        console.error("Synapse Import Error:", e);
+      }
+
       res.json(student);
     } catch (error: any) {
       console.error("Error creating student:", error);
@@ -556,6 +571,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const transfer = await storage.transferStudentCoach(id, newCoachId, transferDate, notes);
+
+      // Synapse Sync (Ops -> App)
+      try {
+        const student = await storage.getStudent(id);
+        const coach = await storage.getCoach(newCoachId);
+        if (student && coach) {
+          const synapse = (await import("./services/synapse")).synapse;
+          synapse.notifyCoachChange(student.email, coach.email).catch(e => console.error("Synapse Transfer Sync Error:", e));
+        }
+      } catch (e) {
+        console.error("Synapse Transfer Setup Error:", e);
+      }
+
       res.json(transfer);
     } catch (error) {
       console.error("Error transferring student coach:", error);

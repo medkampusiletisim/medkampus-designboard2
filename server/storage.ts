@@ -65,6 +65,8 @@ export interface IStorage {
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: string, student: Partial<InsertStudent>): Promise<Student>;
   archiveStudent(id: string, leaveDate: string): Promise<void>;
+  deleteStudent(id: string): Promise<void>;
+  updateStudentDates(id: string, startDate: string, endDate: string): Promise<void>;
 
   // Payment Records
   createPaymentRecord(record: InsertPaymentRecord): Promise<PaymentRecord>;
@@ -356,6 +358,18 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  // Synapse Sync Helper: Direct update of dates without recalculating from months
+  async updateStudentDates(id: string, startDate: string, endDate: string): Promise<void> {
+    await db
+      .update(students)
+      .set({
+        packageStartDate: startDate,
+        packageEndDate: endDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(students.id, id));
+  }
+
   async archiveStudent(id: string, leaveDate: string): Promise<void> {
     // When archiving a student with a leave date, we must:
     // 1. Set status to archived
@@ -370,6 +384,13 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(students.id, id));
+  }
+
+  async deleteStudent(id: string): Promise<void> {
+    // Delete related records to allow student deletion
+    await db.delete(studentPayments).where(eq(studentPayments.studentId, id));
+    await db.delete(coachTransfers).where(eq(coachTransfers.studentId, id));
+    await db.delete(students).where(eq(students.id, id));
   }
 
   // Payment Records

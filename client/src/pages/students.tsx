@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Pencil, Search, ArrowRightLeft, RefreshCw, Download, Trash2, UserPlus, Filter } from "lucide-react";
+import { Plus, Pencil, Search, ArrowRightLeft, RefreshCw, Download, Trash2, UserPlus, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ export default function Students() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [renewDialogOpen, setRenewDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<
     StudentWithCoach | undefined
   >();
@@ -67,6 +68,25 @@ export default function Students() {
   const { data: students, isLoading } = useQuery<StudentWithCoach[]>({
     queryKey: ["/api/students"],
   });
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   const filteredStudents = students?.filter((student) => {
     const searchLower = searchTerm.toLowerCase();
@@ -77,6 +97,33 @@ export default function Students() {
       student.coach.firstName.toLowerCase().includes(searchLower) ||
       student.coach.lastName.toLowerCase().includes(searchLower)
     );
+  }).sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    let aValue: any = a;
+    let bValue: any = b;
+
+    if (sortConfig.key.includes('.')) {
+      const keys = sortConfig.key.split('.');
+      aValue = aValue[keys[0]][keys[1]];
+      bValue = bValue[keys[0]][keys[1]];
+    } else {
+      aValue = aValue[sortConfig.key as keyof StudentWithCoach];
+      bValue = bValue[sortConfig.key as keyof StudentWithCoach];
+    }
+
+    if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+
+    if (aValue < bValue) {
+      return sortConfig.direction === "asc" ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortConfig.direction === "asc" ? 1 : -1;
+    }
+    return 0;
   });
 
   const handleEdit = (student: StudentWithCoach) => {
@@ -188,12 +235,32 @@ export default function Students() {
         <Table>
           <TableHeader>
             <TableRow className="bg-primary/5 hover:bg-primary/10 border-b border-primary/10">
-              <TableHead className="font-semibold text-primary/80">Öğrenci Adı</TableHead>
-              <TableHead className="font-semibold text-primary/80">E-posta</TableHead>
-              <TableHead className="font-semibold text-primary/80">Atanan Koç</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("firstName")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Öğrenci Adı {getSortIcon("firstName")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("email")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  E-posta {getSortIcon("email")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("coach.firstName")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Atanan Koç {getSortIcon("coach.firstName")}
+                </Button>
+              </TableHead>
               <TableHead className="font-semibold text-primary/80">Paket</TableHead>
-              <TableHead className="font-semibold text-primary/80">Başlangıç</TableHead>
-              <TableHead className="font-semibold text-primary/80">Bitiş</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("packageStartDate")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Başlangıç {getSortIcon("packageStartDate")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort("packageEndDate")} className="hover:bg-transparent hover:text-primary p-0 h-auto font-semibold text-primary/80">
+                  Bitiş {getSortIcon("packageEndDate")}
+                </Button>
+              </TableHead>
               <TableHead className="font-semibold text-primary/80">Durum</TableHead>
               <TableHead className="text-right font-semibold text-primary/80">İşlemler</TableHead>
             </TableRow>

@@ -62,11 +62,41 @@ const cancellationEventSchema = z.object({
     })
 });
 
+const studentDeletedSchema = z.object({
+    type: z.literal("STUDENT_DELETED"),
+    payload: z.object({
+        email: z.string().email(),
+    })
+});
+
+const studentUpdatedSyncSchema = z.object({
+    type: z.literal("STUDENT_UPDATED_SYNC"),
+    payload: z.object({
+        oldEmail: z.string().email().optional(),
+        newEmail: z.string().email(),
+        firstName: z.string(),
+        lastName: z.string(),
+        phone: z.string(),
+    })
+});
+
+const subscriptionDatesSyncSchema = z.object({
+    type: z.literal("SUBSCRIPTION_DATES_SYNC"),
+    payload: z.object({
+        email: z.string().email(),
+        startDate: z.string(),
+        endDate: z.string(),
+    })
+});
+
 // Union Schema
 const webhookSchema = z.discriminatedUnion("type", [
     saleEventSchema,
     coachChangeEventSchema,
-    cancellationEventSchema
+    cancellationEventSchema,
+    studentDeletedSchema,
+    studentUpdatedSyncSchema,
+    subscriptionDatesSyncSchema
 ]);
 
 // Helper to sanitize phone
@@ -75,18 +105,22 @@ function sanitizePhone(phone: string): string {
 }
 
 // Helper to find student
-async function findStudent(email: string, phone: string) {
+async function findStudent(email: string, phone: string, oldEmail?: string) {
     const students = await storage.getAllStudentsIncludingArchived();
 
-    // 1. Try Email
+    // 1. Try Email (Current or Old)
     let match = students.find(s => s.email.toLowerCase() === email.toLowerCase());
     if (match) return match;
 
-    // 2. Try Phone
+    if (oldEmail) {
+        match = students.find(s => s.email.toLowerCase() === oldEmail.toLowerCase());
+        if (match) return match;
+    }
+
     // 2. Try Phone (Match last 6 digits for loose matching)
-    const cleanAvailable = sanitizePhone(phone);
-    if (cleanAvailable.length >= 6) {
-        const incomingLast6 = cleanAvailable.slice(-6);
+    const cleanIncoming = sanitizePhone(phone);
+    if (cleanIncoming.length >= 6) {
+        const incomingLast6 = cleanIncoming.slice(-6);
         match = students.find(s => {
             const cleanDb = sanitizePhone(s.phone);
             return cleanDb.length >= 6 && cleanDb.endsWith(incomingLast6);
@@ -136,6 +170,15 @@ router.post("/webhook", async (req, res) => {
         if (event.type === "SALE_CREATED") {
             const { student: sData, coach: cData, package: pData } = event.payload;
 
+            // Normalize Phone (Best effort to +90)
+            let normalizedPhone = sData.phone.replace(/\D/g, "");
+            if (normalizedPhone.startsWith("0")) normalizedPhone = normalizedPhone.substring(1);
+            if (normalizedPhone.startsWith("90")) normalizedPhone = normalizedPhone.substring(2);
+            if (normalizedPhone.length === 10) normalizedPhone = "+90" + normalizedPhone;
+            // If it failed to look like a TR number, just keep original clean digits or original if needed.
+            // But let's use what we have.
+            sData.phone = normalizedPhone.length >= 10 ? normalizedPhone : sData.phone;
+
             // A. Handle Coach (Upsert)
             let coach = await findCoach(cData.email, `${cData.firstName} ${cData.lastName}`);
             if (!coach) {
@@ -163,9 +206,10 @@ router.post("/webhook", async (req, res) => {
                     phone: sData.phone,         // Sync format
                     packageStartDate: pData.startDate,
                     packageMonths: pData.months,
+                    packageEndDate: pkgEndDate, // Sync end date
                     coachId: coach!.id,
                     status: "active",
-                });
+                } as any);
                 student = (await storage.getStudent(student.id))!;
             } else {
                 console.log(`[Synapse] Student not found, creating from scratch: ${sData.firstName}`);
@@ -178,6 +222,7 @@ router.post("/webhook", async (req, res) => {
                     coachId: coach!.id,
                     packageMonths: pData.months,
                     packageStartDate: pData.startDate,
+                    packageEndDate: pkgEndDate,
                     // IMPORTANT: We do NOT pass initialPayment here to avoid generic note.
                     // We will insert payment manually below with correct Transaction ID.
                     status: "active",
@@ -230,8 +275,55 @@ router.post("/webhook", async (req, res) => {
             const student = await findStudent(sData.email, "000"); // Phone irrelevant for cancellation
 
             if (student) {
-                console.log(`[Synapse] Cancelling student ${student.firstName}`);
-                await storage.archiveStudent(student.id, cancelDate);
+                console.log(`[Synapse] Cancelling/Deleting student ${student.firstName}`);
+                // Use explicit delete if available
+                if ((storage as any).deleteStudent) {
+                    await (storage as any).deleteStudent(student.id);
+                } else {
+                    await storage.archiveStudent(student.id, cancelDate);
+                }
+            }
+        }
+        else if (event.type === "STUDENT_DELETED") {
+            const { email } = event.payload;
+            const student = await findStudent(email, "000"); // Try by email only basically
+
+            if (student) {
+                console.log(`[Synapse] Deleting student ${student.firstName} (Triggered by App)`);
+                // If explicit delete method exists use it, otherwise archive
+                if ((storage as any).deleteStudent) {
+                    await (storage as any).deleteStudent(student.id);
+                } else {
+                    await storage.archiveStudent(student.id, new Date().toISOString());
+                }
+            }
+        }
+        else if (event.type === "STUDENT_UPDATED_SYNC") {
+            const { oldEmail, newEmail, phone, firstName, lastName } = event.payload;
+
+            // Try to find using oldEmail or newEmail or phone
+            const student = await findStudent(newEmail, phone, oldEmail);
+
+            if (student) {
+                console.log(`[Synapse] Syncing Student Data: ${student.email} -> ${newEmail}`);
+                await storage.updateStudent(student.id, {
+                    email: newEmail,
+                    phone: phone,
+                    firstName: firstName,
+                    lastName: lastName
+                });
+            } else {
+                console.warn(`[Synapse] Student not found for Update Sync: ${newEmail}`);
+            }
+        }
+        else if (event.type === "SUBSCRIPTION_DATES_SYNC") {
+            const { email, startDate, endDate } = event.payload;
+            const student = await findStudent(email, "000");
+
+            if (student) {
+                console.log(`[Synapse] Syncing Dates for ${student.firstName}: ${startDate} - ${endDate}`);
+                // Use dedicated method to avoid auto-recalculation
+                await storage.updateStudentDates(student.id, startDate, endDate);
             }
         }
 
