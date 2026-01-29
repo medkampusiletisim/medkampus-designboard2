@@ -122,7 +122,9 @@ router.post("/webhook", async (req, res) => {
         // 1. Verify Secret
         const authHeader = req.headers["x-sync-secret"];
         if (authHeader !== SYNC_SECRET) {
-            console.warn("Unauthorized webhook attempt");
+            const received = typeof authHeader === 'string' ? `${authHeader.substring(0, 3)}... (Len: ${authHeader.length})` : 'Missing/Invalid';
+            const expected = `${SYNC_SECRET.substring(0, 3)}... (Len: ${SYNC_SECRET.length})`;
+            console.warn(`[Synapse] Unauthorized webhook attempt. Received: ${received} vs Expected: ${expected}`);
             return res.status(401).json({ message: "Unauthorized" });
         }
 
