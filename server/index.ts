@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -49,7 +50,26 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // 1. ÖNCE API Rotalarını Kaydet
+  // 1. ÖNCE Auth ve API Rotalarını Kaydet
+  setupAuth(app);
+
+  // GLOBAL API KORUMASI
+  // Giriş yapmamış kullanıcıların API'ye erişimini engelle
+  app.use("/api", (req, res, next) => {
+    // Public rotalara izin ver
+    const publicRoutes = ["/api/login", "/api/logout", "/api/user", "/api/health"];
+    if (publicRoutes.includes(req.path)) {
+      return next();
+    }
+
+    // Giriş kontrolü
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Oturum açmanız gerekiyor." });
+    }
+
+    next();
+  });
+
   const server = await registerRoutes(app);
 
   // 2. ERROR HANDLER (Hataları yakala)

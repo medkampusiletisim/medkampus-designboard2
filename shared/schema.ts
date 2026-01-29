@@ -14,6 +14,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { serial } from "drizzle-orm/pg-core";
 
 // Session storage table for authentication
 export const sessions = pgTable(
@@ -36,6 +37,20 @@ export const systemSettings = pgTable("system_settings", {
   globalPaymentDay: integer("global_payment_day").notNull().default(28),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Users table for Admin Authentication
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  role: text("role").notNull().default("admin"), // admin, viewer
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users);
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
 
 // Expenses table - NEW: Tracks manual expenses and transfer fees
 export const expenses = pgTable("expenses", {

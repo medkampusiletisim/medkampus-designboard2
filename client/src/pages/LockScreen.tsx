@@ -3,30 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, User } from "lucide-react";
 
+import { useAuth } from "@/hooks/use-auth";
+
 interface LockScreenProps {
-  onUnlock: () => void;
+  // onUnlock prop is no longer needed as we use global auth state
 }
 
-export default function LockScreen({ onUnlock }: LockScreenProps) {
+export default function LockScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const { loginMutation } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ŞİFRE VE KULLANICI ADINI BURADAN AYARLIYORUZ
-    // Render'dan Environment Variable olarak çekeceğiz
-    const validUser = import.meta.env.VITE_ADMIN_USER || "admin";
-    const validPass = import.meta.env.VITE_ADMIN_PASS || "123456";
-
-    if (username === validUser && password === validPass) {
-      // Başarılı giriş
-      localStorage.setItem("medkampus_auth", "true");
-      onUnlock();
-    } else {
-      setError("Hatalı kullanıcı adı veya şifre!");
-    }
+    loginMutation.mutate({ username, password });
   };
 
   return (
@@ -78,17 +68,18 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             </div>
           </div>
 
-          {error && (
+          {loginMutation.error && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium text-center animate-in fade-in slide-in-from-top-1">
-              {error}
+              {loginMutation.error.message}
             </div>
           )}
 
           <Button
             type="submit"
+            disabled={loginMutation.isPending}
             className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:to-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.4)] transition-all duration-300 hover:scale-[1.02]"
           >
-            Giriş Yap
+            {loginMutation.isPending ? "Giriş Yapılıyor..." : "Giriş Yap"}
           </Button>
         </form>
 

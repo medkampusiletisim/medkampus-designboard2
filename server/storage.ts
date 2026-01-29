@@ -25,17 +25,32 @@ import {
   type RenewStudentPackage,
   type SmartRenewalRequest,
   type StudentStatus,
-  expenses, // Added import
+  expenses,
+  users,
+  type User,
+  type InsertUser,
 } from "@shared/schema";
-import { db } from "./db";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool, db } from "./db";
 import { eq, and, sql, desc, asc, lte, gte } from "drizzle-orm";
 import { addMonths, format, differenceInDays, parseISO, max } from "date-fns";
 
+const PostgresSessionStore = connectPg(session);
+
 export interface IStorage {
+  sessionStore: session.Store;
   // System Settings
   getSettings(): Promise<SystemSettings>;
   updateSettings(settings: InsertSystemSettings): Promise<SystemSettings>;
   initializeSettings(): Promise<void>;
+
+  // Users (Auth)
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+
 
   // Coaches
   getAllCoaches(): Promise<CoachWithStudents[]>;
@@ -111,6 +126,15 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
+    });
+  }
+
   // System Settings
   async getSettings(): Promise<SystemSettings> {
     const [settings] = await db.select().from(systemSettings).limit(1);
@@ -144,6 +168,32 @@ export class DatabaseStorage implements IStorage {
       globalPaymentDay: 28,
     }).onConflictDoNothing();
   }
+
+  // Users (Auth)
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
 
   // Coaches
   async getAllCoaches(): Promise<CoachWithStudents[]> {
