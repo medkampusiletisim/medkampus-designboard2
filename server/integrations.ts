@@ -108,26 +108,45 @@ function sanitizePhone(phone: string): string {
 async function findStudent(email: string, phone: string, oldEmail?: string) {
     const students = await storage.getAllStudentsIncludingArchived();
 
-    // 1. Try Email (Current or Old)
-    let match = students.find(s => s.email.toLowerCase() === email.toLowerCase());
-    if (match) return match;
+    // Aggressive normalization: lowercase + remove ALL whitespace
+    const cleanEmail = email.toLowerCase().replace(/\s+/g, "");
+    const cleanOldEmail = oldEmail?.toLowerCase().replace(/\s+/g, "");
 
-    if (oldEmail) {
-        match = students.find(s => s.email.toLowerCase() === oldEmail.toLowerCase());
-        if (match) return match;
+    // Log the search attempt for debugging
+    console.log(`[Synapse Debug] Searching Student -> New: '${cleanEmail}', Old: '${cleanOldEmail || "N/A"}', Phone: '${phone}'`);
+
+    // 1. Try Primary Email
+    let match = students.find(s => s.email?.toLowerCase().replace(/\s+/g, "") === cleanEmail);
+    if (match) {
+        console.log(`[Synapse Debug] Found by primary email: ${match.id} (${match.email})`);
+        return match;
     }
 
-    // 2. Try Phone (Match last 6 digits for loose matching)
+    // 2. Try Old Email (if provided)
+    if (cleanOldEmail) {
+        match = students.find(s => s.email?.toLowerCase().replace(/\s+/g, "") === cleanOldEmail);
+        if (match) {
+            console.log(`[Synapse Debug] Found by old email: ${match.id} (${match.email})`);
+            return match;
+        }
+    }
+
+    // 3. Try Phone (Match last 6 digits for loose matching)
+    // Only use phone fallback if email lookup failed completely
     const cleanIncoming = sanitizePhone(phone);
     if (cleanIncoming.length >= 6) {
         const incomingLast6 = cleanIncoming.slice(-6);
         match = students.find(s => {
-            const cleanDb = sanitizePhone(s.phone);
+            const cleanDb = sanitizePhone(s.phone || "");
             return cleanDb.length >= 6 && cleanDb.endsWith(incomingLast6);
         });
-        if (match) return match;
+        if (match) {
+            console.log(`[Synapse Debug] Found by phone similarity: ${match.id} (DB: ${match.phone}, In: ${phone})`);
+            return match;
+        }
     }
 
+    console.log(`[Synapse Debug] Student not found.`);
     return null;
 }
 
