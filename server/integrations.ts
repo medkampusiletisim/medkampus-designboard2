@@ -146,17 +146,27 @@ async function findStudent(email: string, phone: string, oldEmail?: string, name
         }
     }
 
-    // 4. Try Full Name (Exact Case-Insensitive Match)
+    // 4. Try Full Name (Fuzzy Match - English Char Normalization)
     if (name) {
-        const cleanName = (name.first + name.last).toLowerCase().replace(/\s+/g, "");
-        // length check to avoid "Ali Efe" common name clashes 
+        // Turkish char normalization map
+        const toEnglish = (str: string) => {
+            const map: { [key: string]: string } = {
+                'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+                'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
+            };
+            return str.replace(/[çğıöşüÇĞİÖŞÜ]/g, (match) => map[match] || match).toLowerCase().replace(/\s+/g, "");
+        };
+
+        const cleanName = toEnglish(name.first + name.last);
+
+        // Safety: Only match if name is reasonably long (>= 5 chars)
         if (cleanName.length >= 5) {
             match = students.find(s => {
-                const dbName = (s.firstName + s.lastName).toLowerCase().replace(/\s+/g, "");
+                const dbName = toEnglish((s.firstName || "") + (s.lastName || ""));
                 return dbName === cleanName;
             });
             if (match) {
-                console.log(`[Synapse Debug] Found by EXACT name match: ${match.id} (${match.firstName} ${match.lastName})`);
+                console.log(`[Synapse Debug] Found by NAME match (Turkish insensitive): ${match.id} (${match.firstName} ${match.lastName})`);
                 return match;
             }
         }
