@@ -21,7 +21,6 @@ import {
   type StudentPayment,
   type InsertStudentPayment,
   type CoachPayroll,
-  type InsertCoachPayroll,
   type RenewStudentPackage,
   type SmartRenewalRequest,
   type StudentStatus,

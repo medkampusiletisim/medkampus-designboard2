@@ -146,7 +146,7 @@ async function findStudent(email: string, phone: string, oldEmail?: string, name
         }
     }
 
-    // 4. Try Full Name (Fuzzy Match - English Char Normalization)
+    // 4. Try Full Name (Token-based Subset Match for Robustness)
     if (name) {
         // Turkish char normalization map
         const toEnglish = (str: string) => {
@@ -154,19 +154,31 @@ async function findStudent(email: string, phone: string, oldEmail?: string, name
                 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
                 'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
             };
-            return str.replace(/[çğıöşüÇĞİÖŞÜ]/g, (match) => map[match] || match).toLowerCase().replace(/\s+/g, "");
+            return str.replace(/[çğıöşüÇĞİÖŞÜ]/g, (match) => map[match] || match).toLowerCase();
         };
 
-        const cleanName = toEnglish(name.first + name.last);
+        const tokenize = (str: string) => {
+            return toEnglish(str).split(/[^a-z0-9]+/).filter(t => t.length > 1); // Split by non-alphanumeric, filter single chars
+        };
 
-        // Safety: Only match if name is reasonably long (>= 5 chars)
-        if (cleanName.length >= 5) {
+        const incomingTokens = tokenize(name.first + " " + name.last);
+
+        // Only attempt if we have meaningful tokens (e.g. at least 2 parts like First Last)
+        if (incomingTokens.length >= 2) {
             match = students.find(s => {
-                const dbName = toEnglish((s.firstName || "") + (s.lastName || ""));
-                return dbName === cleanName;
+                const dbTokens = tokenize((s.firstName || "") + " " + (s.lastName || ""));
+                if (dbTokens.length < 2) return false;
+
+                // Check Subset: Are ALL incoming tokens present in DB tokens?
+                const incomingInDb = incomingTokens.every(t => dbTokens.includes(t));
+                // OR Are ALL DB tokens present in Incoming tokens? (Handles DB="Ahmet Yilmaz", In="Ahmet Can Yilmaz")
+                const dbInIncoming = dbTokens.every(t => incomingTokens.includes(t));
+
+                return incomingInDb || dbInIncoming;
             });
+
             if (match) {
-                console.log(`[Synapse Debug] Found by NAME match (Turkish insensitive): ${match.id} (${match.firstName} ${match.lastName})`);
+                console.log(`[Synapse Debug] Found by NAME TOKEN match: ${match.id} (${match.firstName} ${match.lastName})`);
                 return match;
             }
         }
