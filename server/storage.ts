@@ -808,13 +808,20 @@ export class DatabaseStorage implements IStorage {
     return allCoaches;
   }
 
-  // Financial summary: Total Income - Total Expense = Net Profit
+  // Financial summary: Total Income - 1 month coach fee per payment = Net Profit
   async getFinancialSummary(): Promise<{ totalIncome: string; totalExpense: string; netProfit: string }> {
     // Get total income from student payments
     const incomeResult = await db
       .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
       .from(studentPayments);
     const totalIncome = parseFloat(incomeResult[0]?.total || "0");
+
+    const settings = await this.getSettings();
+    const monthlyFee = parseFloat(settings.coachMonthlyFee || "0");
+    const paymentCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(studentPayments);
+    const paymentCount = Number(paymentCountResult[0]?.count || 0);
 
     // Get total expense from coach payrolls (paid only)
     const expenseResult = await db
@@ -823,7 +830,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coachPayrolls.status, "paid"));
     const totalExpense = parseFloat(expenseResult[0]?.total || "0");
 
-    const netProfit = totalIncome - totalExpense;
+    const expectedCoachCost = paymentCount * monthlyFee;
+    const netProfit = totalIncome - expectedCoachCost;
 
     return {
       totalIncome: totalIncome.toFixed(2),
